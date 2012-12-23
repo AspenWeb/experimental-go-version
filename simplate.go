@@ -14,11 +14,12 @@ const (
 )
 
 type Simplate struct {
-	Filename    string
-	Type        string
-	ContentType string
-	InitPage    *SimplatePage
-	LogicPages  []*SimplatePage
+	Filename     string
+	Type         string
+	ContentType  string
+	InitPage     *SimplatePage
+	LogicPages   []*SimplatePage
+	TemplatePage *SimplatePage
 }
 
 type SimplatePage struct {
@@ -35,20 +36,28 @@ func SimplateFromString(filename, content string) *Simplate {
 		ContentType: mime.TypeByExtension(path.Ext(filename)),
 	}
 
-	if nbreaks == 1 && s.ContentType == "application/json" {
-		s.Type = SIMPLATE_TYPE_JSON
-		return s
-	}
-
-	if nbreaks == 2 {
-		s.Type = SIMPLATE_TYPE_RENDERED
+	if nbreaks == 1 || nbreaks == 2 {
 		s.InitPage = &SimplatePage{Body: rawPages[0]}
 		s.LogicPages = append(s.LogicPages, &SimplatePage{Body: rawPages[1]})
+
+		if s.ContentType == "application/json" {
+			s.Type = SIMPLATE_TYPE_JSON
+		} else {
+			s.Type = SIMPLATE_TYPE_RENDERED
+			s.TemplatePage = &SimplatePage{Body: rawPages[2]}
+		}
+
 		return s
 	}
 
 	if nbreaks > 2 {
 		s.Type = SIMPLATE_TYPE_NEGOTIATED
+		s.InitPage = &SimplatePage{Body: rawPages[0]}
+
+		for _, rawPage := range rawPages {
+			s.LogicPages = append(s.LogicPages, &SimplatePage{Body: rawPage})
+		}
+
 		return s
 	}
 

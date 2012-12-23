@@ -138,3 +138,54 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 			"of logic pages assigned!: %v", len(s.LogicPages))
 	}
 }
+
+func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if s.TemplatePage == nil {
+		t.Errorf("Rendered simplate had no template page assigned!: %v", s.TemplatePage)
+	}
+}
+
+func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
+	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	if s.InitPage == nil {
+		t.Errorf("JSON simplate had no init page assigned!: %v", s.InitPage)
+	}
+}
+
+func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
+	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	if len(s.LogicPages) != 1 {
+		t.Errorf("Rendered simplate unexpected number "+
+			"of logic pages assigned!: %v", len(s.LogicPages))
+	}
+}
+
+func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
+	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	if s.TemplatePage != nil {
+		t.Errorf("JSON simplate had a template page assigned!: %v", s.TemplatePage)
+	}
+}
+
+func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if s.InitPage == nil {
+		t.Errorf("Negotiated simplate had no init page assigned!: %v", s.InitPage)
+	}
+}
+
+func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if len(s.LogicPages) < 1 {
+		t.Errorf("Negotiated simplate unexpected number "+
+			"of logic pages assigned!: %v", len(s.LogicPages))
+	}
+}
+
+func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if s.TemplatePage != nil {
+		t.Errorf("Negotiated simplate had a template page assigned!: %v", s.TemplatePage)
+	}
+}
