@@ -18,12 +18,12 @@ type Dance struct {
     When time.Time
 }
 
-d := &Dance{
+D := &Dance{
     Who:  "Everybody",
     When: time.Now(),
 }
 
-{{d.Who}} Dance {{d.When}}!
+{{.D.Who}} Dance {{.D.When}}!
 `
 	BASIC_STATIC_TXT_SIMPLATE = `
 Everybody Dance Now!
@@ -38,11 +38,11 @@ type Dance struct {
     When time.Time
 }
 
-d := &Dance{
+D := &Dance{
     Who:  "Everybody",
     When: time.Now(),
 }
-response.SetBody(d)
+response.SetBody(D)
 `
 	BASIC_NEGOTIATED_SIMPLATE = `
 import (
@@ -54,15 +54,15 @@ type Dance struct {
     When time.Time
 }
 
-d := &Dance{
+D := &Dance{
     Who:  "Everybody",
     When: time.Now(),
 }
  text/plain
-{{d.Who}} Dance {{d.When}}!
+{{.D.Who}} Dance {{.D.When}}!
 
  application/json
-{"who":"{{d.Who}}","when":"{{d.When}}"}
+{"who":"{{.D.Who}}","when":"{{.D.When}}"}
 `
 )
 
@@ -110,5 +110,31 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 	if s.Type != SIMPLATE_TYPE_NEGOTIATED {
 		t.Errorf("Simplate detected as %s instead of %s",
 			s.Type, SIMPLATE_TYPE_NEGOTIATED)
+	}
+}
+
+func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
+	s := SimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	if s.InitPage != nil {
+		t.Errorf("Static simplate had init page assigned!: %v", s.InitPage)
+	}
+
+	if len(s.LogicPages) > 0 {
+		t.Errorf("Static simplate had logic pages assigned!: %v", s.LogicPages)
+	}
+}
+
+func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if s.InitPage == nil {
+		t.Errorf("Rendered simplate had no init page assigned!: %v", s.InitPage)
+	}
+}
+
+func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if len(s.LogicPages) != 1 {
+		t.Errorf("Rendered simplate unexpected number "+
+			"of logic pages assigned!: %v", len(s.LogicPages))
 	}
 }
