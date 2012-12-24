@@ -1,11 +1,11 @@
 package smplt
 
 import (
-	"bufio"
 	"io"
 	"mime"
 	"path"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -13,6 +13,35 @@ const (
 	SIMPLATE_TYPE_STATIC     = "static"
 	SIMPLATE_TYPE_NEGOTIATED = "negotiated"
 	SIMPLATE_TYPE_JSON       = "json"
+)
+
+var (
+	simplateGenFileTmpl = template.Must(template.New("smpltgen").Parse(strings.Replace(`
+  /* GENERATED FILE - DO NOT EDIT */
+  /* Rebuild with simplate filesystem parsing thingy! */
+  package smpltgen
+
+  import (
+      "text/template"
+  )
+
+  {{.InitPage.Body}}
+
+  const (
+      SIMPLATE_TMPL_{{.ConstName}} = __BACKTICK__{{.TemplatePage.Body}}__BACKTICK__
+  )
+
+  var (
+      simplateTmpl{{.FuncName}} = template.Must(template.New("{{.FuncName}}").Parse(SIMPLATE_TMPL_{{.ConstName}}))
+  )
+
+  func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
+      {{range .LogicPages}}
+        {{.Body}}
+      {{end}}
+  }
+
+`, "__BACKTICK__", "`", -1)))
 )
 
 type Simplate struct {
@@ -67,19 +96,13 @@ func SimplateFromString(filename, content string) *Simplate {
 }
 
 func (me *Simplate) Execute(wr io.Writer) error {
-	outbuf := bufio.NewWriter(wr)
+	return simplateGenFileTmpl.Execute(wr, me)
+}
 
-	_, err := outbuf.WriteString("package smplt_gen\n")
-	if err != nil {
-		return err
-	}
-
-	err = outbuf.Flush()
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (me *Simplate) escapedFilename() string {
+	lessDots := strings.Replace(me.Filename, ".", "-DOT-", -1)
+	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
+	return strings.Replace(lessSlashes, " ", "-SPACE-", -1)
 }
 
 func (me *Simplate) OutputName() string {
@@ -87,8 +110,24 @@ func (me *Simplate) OutputName() string {
 		return me.Filename
 	}
 
-	lessDots := strings.Replace(me.Filename, ".", "-DOT-", -1)
-	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
-	lessSpaces := strings.Replace(lessSlashes, " ", "-SPACE-", -1)
-	return lessSpaces + ".go"
+	return me.escapedFilename() + ".go"
+}
+
+func (me *Simplate) FuncName() string {
+	escaped := me.escapedFilename()
+	parts := strings.Split(escaped, "-")
+	for i, part := range parts {
+		var capitalized []string
+		capitalized = append(capitalized, strings.ToUpper(string(part[0])))
+		capitalized = append(capitalized, strings.ToLower(part[1:]))
+		parts[i] = strings.Join(capitalized, "")
+	}
+
+	return strings.Join(parts, "")
+}
+
+func (me *Simplate) ConstName() string {
+	escaped := me.escapedFilename()
+	uppered := strings.ToUpper(escaped)
+	return strings.Replace(uppered, "-", "_", -1)
 }

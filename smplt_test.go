@@ -241,7 +241,11 @@ func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
 
 func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
 	mkTmpDir()
-	defer rmTmpDir()
+	if len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0 {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
 
 	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	outfile_name := path.Join(tmpdir, s.OutputName())
