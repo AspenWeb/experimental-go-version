@@ -66,14 +66,29 @@ func SimplateFromString(filename, content string) *Simplate {
 	return s
 }
 
-func (me *Simplate) Execute(wr io.Writer, data interface{}) error {
+func (me *Simplate) Execute(wr io.Writer) error {
 	outbuf := bufio.NewWriter(wr)
-	defer outbuf.Flush()
 
 	_, err := outbuf.WriteString("package smplt_gen\n")
 	if err != nil {
 		return err
 	}
 
+	err = outbuf.Flush()
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (me *Simplate) OutputName() string {
+	if me.Type == SIMPLATE_TYPE_STATIC {
+		return me.Filename
+	}
+
+	lessDots := strings.Replace(me.Filename, ".", "-DOT-", -1)
+	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
+	lessSpaces := strings.Replace(lessSlashes, " ", "-SPACE-", -1)
+	return lessSpaces + ".go"
 }

@@ -1,7 +1,6 @@
 package smplt_test
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"go/parser"
@@ -108,6 +107,20 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 	if s.ContentType != expected {
 		t.Errorf("Simplate content type incorrectly assigned as %s instead of %s",
 			s.ContentType, expected)
+	}
+}
+
+func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
+	s := SimplateFromString("nothing.txt", "foo\nham\n")
+	if s.OutputName() != "nothing.txt" {
+		t.Errorf("Static simplate output name is wrong!: %v", s.OutputName())
+	}
+}
+
+func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
+	s := SimplateFromString("flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if s.OutputName() != "flip-SLASH-dippy-SPACE-slippy-SLASH-snork-DOT-d-SLASH-basic-rendered-DOT-txt.go" {
+		t.Errorf("Rendered simplate output name is wrong!: %v", s.OutputName())
 	}
 }
 
@@ -220,7 +233,7 @@ func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
 	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	var out bytes.Buffer
-	err := s.Execute(bufio.NewWriter(&out), "no data needed")
+	err := s.Execute(&out)
 	if err != nil {
 		t.Error(err)
 	}
@@ -231,15 +244,18 @@ func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
 	defer rmTmpDir()
 
 	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
-	outfile_name := path.Join(tmpdir, "basic_rendered.go")
+	outfile_name := path.Join(tmpdir, s.OutputName())
 	outf, err := os.Create(outfile_name)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	s.Execute(outf, "nothing here")
-	outf.Close()
+	s.Execute(outf)
+	err = outf.Close()
+	if err != nil {
+		t.Error(err)
+	}
 
 	fset := token.NewFileSet()
 	_, err = parser.ParseFile(fset, outfile_name, nil, parser.DeclarationErrors)
