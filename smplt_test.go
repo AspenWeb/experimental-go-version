@@ -1,8 +1,16 @@
 package smplt_test
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"go/parser"
+	"go/token"
 	"mime"
+	"os"
+	"path"
 	"testing"
+	"time"
 
 	. "github.com/meatballhat/box-o-sand/gotime/smplt"
 )
@@ -65,6 +73,25 @@ D := &Dance{
 {"who":"{{.D.Who}}","when":"{{.D.When}}"}
 `
 )
+
+var (
+	tmpdir = path.Join(os.TempDir(),
+		fmt.Sprintf("smplt_test-%d", time.Now().UTC().UnixNano()))
+)
+
+func mkTmpDir() {
+	err := os.MkdirAll(tmpdir, os.ModeDir|os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func rmTmpDir() {
+	err := os.RemoveAll(tmpdir)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
 	s := SimplateFromString("hasty-decisions.txt", "herpherpderpherp")
@@ -187,5 +214,37 @@ func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
 	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if s.TemplatePage != nil {
 		t.Errorf("Negotiated simplate had a template page assigned!: %v", s.TemplatePage)
+	}
+}
+
+func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	var out bytes.Buffer
+	err := s.Execute(bufio.NewWriter(&out), "no data needed")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
+	mkTmpDir()
+	defer rmTmpDir()
+
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	outfile_name := path.Join(tmpdir, "basic_rendered.go")
+	outf, err := os.Create(outfile_name)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	s.Execute(outf, "nothing here")
+	outf.Close()
+
+	fset := token.NewFileSet()
+	_, err = parser.ParseFile(fset, outfile_name, nil, parser.DeclarationErrors)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 }

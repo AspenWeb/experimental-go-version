@@ -1,6 +1,8 @@
 package smplt
 
 import (
+	"bufio"
+	"io"
 	"mime"
 	"path"
 	"strings"
@@ -62,4 +64,16 @@ func SimplateFromString(filename, content string) *Simplate {
 	}
 
 	return s
+}
+
+func (me *Simplate) Execute(wr io.Writer, data interface{}) error {
+	outbuf := bufio.NewWriter(wr)
+	defer outbuf.Flush()
+
+	_, err := outbuf.WriteString("package smplt_gen\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
