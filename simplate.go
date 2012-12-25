@@ -17,30 +17,53 @@ const (
 
 var (
 	simplateGenFileTmpl = template.Must(template.New("smpltgen").Parse(strings.Replace(`
-  /* GENERATED FILE - DO NOT EDIT */
-  /* Rebuild with simplate filesystem parsing thingy! */
-  package smpltgen
+/* GENERATED FILE - DO NOT EDIT */
+/* Rebuild with simplate filesystem parsing thingy! */
+package smpltgen
 
-  import (
-      "text/template"
-  )
+import (
+    "bytes"
+    "net/http"
+    "text/template"
 
-  {{.InitPage.Body}}
+    "github.com/meatballhat/box-o-sand/gotime/smplt"
+)
 
-  const (
-      SIMPLATE_TMPL_{{.ConstName}} = __BACKTICK__{{.TemplatePage.Body}}__BACKTICK__
-  )
+{{.InitPage.Body}}
 
-  var (
-      simplateTmpl{{.FuncName}} = template.Must(template.New("{{.FuncName}}").Parse(SIMPLATE_TMPL_{{.ConstName}}))
-  )
+{{if .HasTemplatePage}}
+const (
+    SIMPLATE_TMPL_{{.ConstName}} = __BACKTICK__{{.TemplatePage.Body}}__BACKTICK__
+)
 
-  func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
-      {{range .LogicPages}}
+var (
+    simplateTmpl{{.FuncName}} = template.Must(template.New("{{.FuncName}}").Parse(SIMPLATE_TMPL_{{.ConstName}}))
+)
+{{end}}
+
+func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
+    var err error
+    ctx := make(map[string]interface{})
+
+    {{range .LogicPages}}
         {{.Body}}
-      {{end}}
-  }
+    {{end}}
 
+    {{if .HasTemplatePage}}
+    var tmplBuf bytes.Buffer
+    err = simplateTmpl{{.FuncName}}.Execute(&tmplBuf, ctx)
+    if err != nil {
+        w.Header().Set("Content-Type", "text/html")
+        w.WriteHeader(http.StatusInternalServerError)
+        w.Write(smplt.HTTP_500_RESPONSE)
+        return
+    }
+
+    w.Header().Set("Content-Type", "{{.ContentType}}")
+    w.WriteHeader(http.StatusOK)
+    w.Write(tmplBuf.Bytes())
+    {{end}}
+}
 `, "__BACKTICK__", "`", -1)))
 )
 
@@ -130,4 +153,8 @@ func (me *Simplate) ConstName() string {
 	escaped := me.escapedFilename()
 	uppered := strings.ToUpper(escaped)
 	return strings.Replace(uppered, "-", "_", -1)
+}
+
+func (me *Simplate) HasTemplatePage() bool {
+	return len(me.TemplatePage.Body) > 0
 }

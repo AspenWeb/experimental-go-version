@@ -25,7 +25,7 @@ type Dance struct {
     When time.Time
 }
 
-D := &Dance{
+ctx["D"] = &Dance{
     Who:  "Everybody",
     When: time.Now(),
 }
@@ -45,11 +45,11 @@ type Dance struct {
     When time.Time
 }
 
-D := &Dance{
+ctx["D"] = &Dance{
     Who:  "Everybody",
     When: time.Now(),
+response.SetBody(ctx["D"])
 }
-response.SetBody(D)
 `
 	BASIC_NEGOTIATED_SIMPLATE = `
 import (
@@ -61,7 +61,7 @@ type Dance struct {
     When time.Time
 }
 
-D := &Dance{
+ctx["D"] = &Dance{
     Who:  "Everybody",
     When: time.Now(),
 }
