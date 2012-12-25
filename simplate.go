@@ -16,6 +16,12 @@ const (
 )
 
 var (
+	SIMPLATE_TYPES = []string{
+		SIMPLATE_TYPE_JSON,
+		SIMPLATE_TYPE_NEGOTIATED,
+		SIMPLATE_TYPE_RENDERED,
+		SIMPLATE_TYPE_STATIC,
+	}
 	simplateGenFileTmpl = template.Must(template.New("smpltgen").Parse(strings.Replace(`
 /* GENERATED FILE - DO NOT EDIT */
 /* Rebuild with simplate filesystem parsing thingy! */
@@ -80,7 +86,7 @@ type SimplatePage struct {
 	Body string
 }
 
-func SimplateFromString(filename, content string) *Simplate {
+func NewSimplateFromString(filename, content string) *Simplate {
 	rawPages := strings.Split(content, "")
 	nbreaks := len(rawPages) - 1
 

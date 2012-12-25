@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -79,23 +80,43 @@ ctx["D"] = &Dance{
 var (
 	tmpdir = path.Join(os.TempDir(),
 		fmt.Sprintf("smplt_test-%d", time.Now().UTC().UnixNano()))
-	smpltgenDir = path.Join(tmpdir, "src", "smpltgen")
-	goCmd       string
+	smpltgenDir   = path.Join(tmpdir, "src", "smpltgen")
+	testSiteRoot  = path.Join(tmpdir, "test-site")
+	goCmd         string
+	noCleanup     bool
+	testSiteFiles = map[string]string{
+		"hams/bone/derp":                               BASIC_NEGOTIATED_SIMPLATE,
+		"shill/cans.txt":                               BASIC_RENDERED_TXT_SIMPLATE,
+		"hat/v.json":                                   BASIC_JSON_SIMPLATE,
+		"silmarillion.handlebar.mustache.moniker.html": "<html>INVALID AS BUTT</html>",
+		"Big CMS/Owns_UR Contents/flurb.txt":           BASIC_STATIC_TXT_SIMPLATE,
+	}
 )
 
 func init() {
 	err := os.Setenv("GOPATH", strings.Join([]string{tmpdir, os.Getenv("GOPATH")}, ":"))
 	if err != nil {
-		log.Fatal(err)
+		if noCleanup {
+			log.Fatal(err)
+		} else {
+			panic(err)
+		}
 	}
 
 	cmd, err := exec.LookPath("go")
 	if err != nil {
-		log.Fatal(err)
+		if noCleanup {
+			log.Fatal(err)
+		} else {
+			panic(err)
+		}
 	}
 
 	goCmdAddr := &goCmd
 	*goCmdAddr = cmd
+
+	noCleanupAddr := &noCleanup
+	*noCleanupAddr = len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0
 }
 
 func mkTmpDir() {
@@ -112,8 +133,37 @@ func rmTmpDir() {
 	}
 }
 
+func mkTestSite() string {
+	mkTmpDir()
+
+	for filePath, content := range testSiteFiles {
+		fullPath := path.Join(testSiteRoot, filePath)
+		err := os.MkdirAll(path.Dir(fullPath), os.ModeDir|os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+
+		f, err := os.Create(fullPath)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = f.WriteString(content)
+		if err != nil {
+			panic(err)
+		}
+
+		err = f.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return testSiteRoot
+}
+
 func writeRenderedTemplate() (string, error) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	outfileName := path.Join(smpltgenDir, s.OutputName())
 	outf, err := os.Create(outfileName)
 	if err != nil {
@@ -141,7 +191,9 @@ func runGoCommandOnSmpltgen(command string) error {
 		return err
 	}
 
-	log.Println(out.String())
+	if noCleanup {
+		log.Println(out.String())
+	}
 	return nil
 }
 
@@ -154,7 +206,7 @@ func buildRenderedTemplate() error {
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
-	s := SimplateFromString("hasty-decisions.txt", "herpherpderpherp")
+	s := NewSimplateFromString("hasty-decisions.txt", "herpherpderpherp")
 	if s.Filename != "hasty-decisions.txt" {
 		t.Errorf("Simplate filename incorrectly assigned as %s instead of %s",
 			s.Filename, "hasty-decisions.txt")
@@ -162,7 +214,7 @@ func TestSimplateKnowsItsFilename(t *testing.T) {
 }
 
 func TestSimplateKnowsItsContentType(t *testing.T) {
-	s := SimplateFromString("hasty-decisions.js", "function herp() { return 'derp'; }")
+	s := NewSimplateFromString("hasty-decisions.js", "function herp() { return 'derp'; }")
 	expected := mime.TypeByExtension(".js")
 
 	if s.ContentType != expected {
@@ -172,42 +224,42 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 }
 
 func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
-	s := SimplateFromString("nothing.txt", "foo\nham\n")
+	s := NewSimplateFromString("nothing.txt", "foo\nham\n")
 	if s.OutputName() != "nothing.txt" {
 		t.Errorf("Static simplate output name is wrong!: %v", s.OutputName())
 	}
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s := SimplateFromString("flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if s.OutputName() != "flip-SLASH-dippy-SPACE-slippy-SLASH-snork-DOT-d-SLASH-basic-rendered-DOT-txt.go" {
 		t.Errorf("Rendered simplate output name is wrong!: %v", s.OutputName())
 	}
 }
 
 func TestDetectsRenderedSimplate(t *testing.T) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if s.Type != SIMPLATE_TYPE_RENDERED {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_RENDERED)
 	}
 }
 
 func TestDetectsStaticSimplate(t *testing.T) {
-	s := SimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
 	if s.Type != SIMPLATE_TYPE_STATIC {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_STATIC)
 	}
 }
 
 func TestDetectsJSONSimplates(t *testing.T) {
-	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
 	if s.Type != SIMPLATE_TYPE_JSON {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_JSON)
 	}
 }
 
 func TestDetectsNegotiatedSimplates(t *testing.T) {
-	s := SimplateFromString("hork", BASIC_NEGOTIATED_SIMPLATE)
+	s := NewSimplateFromString("hork", BASIC_NEGOTIATED_SIMPLATE)
 	if s.Type != SIMPLATE_TYPE_NEGOTIATED {
 		t.Errorf("Simplate detected as %s instead of %s",
 			s.Type, SIMPLATE_TYPE_NEGOTIATED)
@@ -215,7 +267,7 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
-	s := SimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
 	if s.InitPage != nil {
 		t.Errorf("Static simplate had init page assigned!: %v", s.InitPage)
 	}
@@ -226,14 +278,14 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if s.InitPage == nil {
 		t.Errorf("Rendered simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if len(s.LogicPages) != 1 {
 		t.Errorf("Rendered simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -241,21 +293,21 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if s.TemplatePage == nil {
 		t.Errorf("Rendered simplate had no template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
-	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
 	if s.InitPage == nil {
 		t.Errorf("JSON simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
-	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
 	if len(s.LogicPages) != 1 {
 		t.Errorf("Rendered simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -263,21 +315,21 @@ func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
-	s := SimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
 	if s.TemplatePage != nil {
 		t.Errorf("JSON simplate had a template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if s.InitPage == nil {
 		t.Errorf("Negotiated simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if len(s.LogicPages) < 1 {
 		t.Errorf("Negotiated simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -285,14 +337,14 @@ func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
-	s := SimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if s.TemplatePage != nil {
 		t.Errorf("Negotiated simplate had a template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	var out bytes.Buffer
 	err := s.Execute(&out)
 	if err != nil {
@@ -302,7 +354,7 @@ func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
 
 func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
 	mkTmpDir()
-	if len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0 {
+	if noCleanup {
 		fmt.Println("tmpdir =", tmpdir)
 	} else {
 		defer rmTmpDir()
@@ -324,7 +376,7 @@ func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
 
 func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 	mkTmpDir()
-	if len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0 {
+	if noCleanup {
 		fmt.Println("tmpdir =", tmpdir)
 	} else {
 		defer rmTmpDir()
@@ -346,5 +398,47 @@ func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 		return
+	}
+}
+
+func TestTreeWalkerRequiresValidDirectoryRoot(t *testing.T) {
+	_, err := NewTreeWalker("/dev/null")
+	if err == nil {
+		t.Errorf("New tree walker failed to reject invalid dir!")
+		return
+	}
+}
+
+func TestTreeWalkerYieldsSimplates(t *testing.T) {
+	siteRoot := mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	tw, err := NewTreeWalker(siteRoot)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	n := 0
+
+	simplates, err := tw.Simplates()
+	if err != nil {
+		t.Error(err)
+	}
+
+	for simplate := range simplates {
+		if sort.SearchStrings(SIMPLATE_TYPES, simplate.Type) < 0 {
+			t.Errorf("Simplate yielded with invalid type: %v", simplate.Type)
+			return
+		}
+		n++
+	}
+
+	if n != 5 {
+		t.Errorf("Tree walking yielded unexpected number of files: %v", n)
 	}
 }
