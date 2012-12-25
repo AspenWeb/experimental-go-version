@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"log"
 	"mime"
 	"os"
+	"os/exec"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,10 +79,27 @@ ctx["D"] = &Dance{
 var (
 	tmpdir = path.Join(os.TempDir(),
 		fmt.Sprintf("smplt_test-%d", time.Now().UTC().UnixNano()))
+	smpltgenDir = path.Join(tmpdir, "src", "smpltgen")
+	goCmd       string
 )
 
+func init() {
+	err := os.Setenv("GOPATH", strings.Join([]string{tmpdir, os.Getenv("GOPATH")}, ":"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cmd, err := exec.LookPath("go")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	goCmdAddr := &goCmd
+	*goCmdAddr = cmd
+}
+
 func mkTmpDir() {
-	err := os.MkdirAll(tmpdir, os.ModeDir|os.ModePerm)
+	err := os.MkdirAll(smpltgenDir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -90,6 +110,47 @@ func rmTmpDir() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func writeRenderedTemplate() (string, error) {
+	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	outfileName := path.Join(smpltgenDir, s.OutputName())
+	outf, err := os.Create(outfileName)
+	if err != nil {
+		return outfileName, err
+	}
+
+	s.Execute(outf)
+	err = outf.Close()
+	if err != nil {
+		return outfileName, err
+	}
+
+	return outfileName, nil
+}
+
+func runGoCommandOnSmpltgen(command string) error {
+	cmd := exec.Command(goCmd, command, "smpltgen")
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	log.Println(out.String())
+	return nil
+}
+
+func formatRenderedTemplate() error {
+	return runGoCommandOnSmpltgen("fmt")
+}
+
+func buildRenderedTemplate() error {
+	return runGoCommandOnSmpltgen("install")
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
@@ -247,22 +308,41 @@ func TestRenderedSimplateOutputIsValidGoSource(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	s := SimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
-	outfile_name := path.Join(tmpdir, s.OutputName())
-	outf, err := os.Create(outfile_name)
+	outfileName, err := writeRenderedTemplate()
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	s.Execute(outf)
-	err = outf.Close()
+	fset := token.NewFileSet()
+	_, err = parser.ParseFile(fset, outfileName, nil, parser.DeclarationErrors)
 	if err != nil {
 		t.Error(err)
+		return
+	}
+}
+
+func TestRenderedSimplateCanBeCompiled(t *testing.T) {
+	mkTmpDir()
+	if len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0 {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
 	}
 
-	fset := token.NewFileSet()
-	_, err = parser.ParseFile(fset, outfile_name, nil, parser.DeclarationErrors)
+	_, err := writeRenderedTemplate()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = formatRenderedTemplate()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = buildRenderedTemplate()
 	if err != nil {
 		t.Error(err)
 		return
