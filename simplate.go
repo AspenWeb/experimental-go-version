@@ -1,4 +1,4 @@
-package smplt
+package goaspen
 
 import (
 	"io"
@@ -22,17 +22,17 @@ var (
 		SIMPLATE_TYPE_RENDERED,
 		SIMPLATE_TYPE_STATIC,
 	}
-	simplateGenFileTmpl = template.Must(template.New("smpltgen").Parse(strings.Replace(`
+	simplateGenFileTmpl = template.Must(template.New("goaspen-gen").Parse(strings.Replace(`
 /* GENERATED FILE - DO NOT EDIT */
 /* Rebuild with simplate filesystem parsing thingy! */
-package smpltgen
+package goaspen_gen
 
 import (
     "bytes"
     "net/http"
     "text/template"
 
-    "github.com/meatballhat/box-o-sand/gotime/smplt"
+    "github.com/meatballhat/goaspen"
 )
 
 {{.InitPage.Body}}
@@ -61,7 +61,7 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
     if err != nil {
         w.Header().Set("Content-Type", "text/html")
         w.WriteHeader(http.StatusInternalServerError)
-        w.Write(smplt.HTTP_500_RESPONSE)
+        w.Write(goaspen.HTTP_500_RESPONSE)
         return
     }
 

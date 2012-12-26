@@ -1,4 +1,4 @@
-package smplt
+package goaspen
 
 var (
 	HTTP_500_RESPONSE = []byte(`

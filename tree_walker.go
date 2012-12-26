@@ -1,4 +1,4 @@
-package smplt
+package goaspen
 
 import (
 	"errors"

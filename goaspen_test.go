@@ -1,4 +1,4 @@
-package smplt_test
+package goaspen_test
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/meatballhat/box-o-sand/gotime/smplt"
+	. "github.com/meatballhat/goaspen"
 )
 
 const (
@@ -79,8 +79,8 @@ ctx["D"] = &Dance{
 
 var (
 	tmpdir = path.Join(os.TempDir(),
-		fmt.Sprintf("smplt_test-%d", time.Now().UTC().UnixNano()))
-	smpltgenDir   = path.Join(tmpdir, "src", "smpltgen")
+		fmt.Sprintf("goaspen_test-%d", time.Now().UTC().UnixNano()))
+	goAspenGenDir = path.Join(tmpdir, "src", "goaspen_gen")
 	testSiteRoot  = path.Join(tmpdir, "test-site")
 	goCmd         string
 	noCleanup     bool
@@ -116,11 +116,11 @@ func init() {
 	*goCmdAddr = cmd
 
 	noCleanupAddr := &noCleanup
-	*noCleanupAddr = len(os.Getenv("SMPLT_TEST_NOCLEANUP")) > 0
+	*noCleanupAddr = len(os.Getenv("goaspen_TEST_NOCLEANUP")) > 0
 }
 
 func mkTmpDir() {
-	err := os.MkdirAll(smpltgenDir, os.ModeDir|os.ModePerm)
+	err := os.MkdirAll(goAspenGenDir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -164,7 +164,7 @@ func mkTestSite() string {
 
 func writeRenderedTemplate() (string, error) {
 	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
-	outfileName := path.Join(smpltgenDir, s.OutputName())
+	outfileName := path.Join(goAspenGenDir, s.OutputName())
 	outf, err := os.Create(outfileName)
 	if err != nil {
 		return outfileName, err
@@ -179,8 +179,8 @@ func writeRenderedTemplate() (string, error) {
 	return outfileName, nil
 }
 
-func runGoCommandOnSmpltgen(command string) error {
-	cmd := exec.Command(goCmd, command, "smpltgen")
+func runGoCommandOnGoAspenGen(command string) error {
+	cmd := exec.Command(goCmd, command, "goaspen_gen")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -198,11 +198,11 @@ func runGoCommandOnSmpltgen(command string) error {
 }
 
 func formatRenderedTemplate() error {
-	return runGoCommandOnSmpltgen("fmt")
+	return runGoCommandOnGoAspenGen("fmt")
 }
 
 func buildRenderedTemplate() error {
-	return runGoCommandOnSmpltgen("install")
+	return runGoCommandOnGoAspenGen("install")
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
