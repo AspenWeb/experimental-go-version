@@ -9,15 +9,15 @@ import (
 )
 
 var (
-	InvalidTreeWalkerRoot = errors.New("Invalid tree climber root given")
+	InvalidTreeWalkerRoot = errors.New("Invalid tree walker root given")
 )
 
 type TreeWalker struct {
 	Root string
 }
 
-func NewTreeWalker(dirRoot string) (*TreeWalker, error) {
-	fi, err := os.Stat(dirRoot)
+func NewTreeWalker(rootDir string) (*TreeWalker, error) {
+	fi, err := os.Stat(rootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func NewTreeWalker(dirRoot string) (*TreeWalker, error) {
 		return nil, InvalidTreeWalkerRoot
 	}
 
-	return &TreeWalker{Root: dirRoot}, nil
+	return &TreeWalker{Root: rootDir}, nil
 }
 
 func (me *TreeWalker) Simplates() (<-chan *Simplate, error) {
