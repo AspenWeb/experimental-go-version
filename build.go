@@ -16,7 +16,7 @@ type SiteBuilder struct {
 	walker *TreeWalker
 }
 
-func NewSiteBuilder(rootDir, outDir string, format bool) (*SiteBuilder, error) {
+func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder, error) {
 	var (
 		err   error
 		gofmt string
@@ -29,13 +29,20 @@ func NewSiteBuilder(rootDir, outDir string, format bool) (*SiteBuilder, error) {
 		}
 	}
 
-	outDirFi, err := os.Stat(outDir)
-	if err != nil {
-		return nil, err
-	}
+	if mkOutDir {
+		err = os.MkdirAll(outDir, os.ModeDir|os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		outDirFi, err := os.Stat(outDir)
+		if err != nil {
+			return nil, err
+		}
 
-	if !outDirFi.IsDir() {
-		return nil, errors.New(fmt.Sprintf("Invalid build output directory specified: %v", outDir))
+		if !outDirFi.IsDir() {
+			return nil, errors.New(fmt.Sprintf("Invalid build output directory specified: %v", outDir))
+		}
 	}
 
 	walker, err := NewTreeWalker(rootDir)
@@ -78,8 +85,8 @@ func (me *SiteBuilder) Build() error {
 	return nil
 }
 
-func BuildMain(rootDir, outDir string, format bool) int {
-	builder, err := NewSiteBuilder(rootDir, outDir, format)
+func BuildMain(rootDir, outDir string, format, mkOutDir bool) int {
+	builder, err := NewSiteBuilder(rootDir, outDir, format, mkOutDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 1

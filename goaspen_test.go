@@ -444,14 +444,14 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 }
 
 func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
-	_, err := NewSiteBuilder("/dev/null", ".", false)
+	_, err := NewSiteBuilder("/dev/null", ".", false, false)
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid root dir!")
 	}
 }
 
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
-	_, err := NewSiteBuilder(".", "/dev/null", false)
+	_, err := NewSiteBuilder(".", "/dev/null", false, false)
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid output dir!")
 	}
@@ -463,8 +463,48 @@ func TestNewSiteBuilderRequiresGofmtInPathIfFormatRequested(t *testing.T) {
 
 	os.Setenv("PATH", "/bin")
 
-	_, err := NewSiteBuilder(".", ".", true)
+	_, err := NewSiteBuilder(".", ".", true, false)
 	if err == nil {
 		t.Errorf("New site builder failed to reject based on missing 'gofmt'!")
+	}
+}
+
+func TestSiteBuilderExposesRootDir(t *testing.T) {
+	mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if sb.RootDir != testSiteRoot {
+		t.Errorf("RootDir != %s: %s", testSiteRoot, sb.RootDir)
+		return
+	}
+}
+
+func TestSiteBuilderExposesOutputDir(t *testing.T) {
+	mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if sb.OutputDir != goAspenGenDir {
+		t.Errorf("OutputDir != %s: %s", goAspenGenDir, sb.OutputDir)
+		return
 	}
 }
