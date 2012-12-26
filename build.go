@@ -10,15 +10,23 @@ import (
 type SiteBuilder struct {
 	RootDir   string
 	OutputDir string
+	Format    bool
 
 	gofmt  string
 	walker *TreeWalker
 }
 
-func NewSiteBuilder(rootDir, outDir string) (*SiteBuilder, error) {
-	gofmt, err := exec.LookPath("gofmt")
-	if err != nil {
-		return nil, err
+func NewSiteBuilder(rootDir, outDir string, format bool) (*SiteBuilder, error) {
+	var (
+		err   error
+		gofmt string
+	)
+
+	if format {
+		gofmt, err = exec.LookPath("gofmt")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	outDirFi, err := os.Stat(outDir)
@@ -38,6 +46,7 @@ func NewSiteBuilder(rootDir, outDir string) (*SiteBuilder, error) {
 	sb := &SiteBuilder{
 		RootDir:   rootDir,
 		OutputDir: outDir,
+		Format:    format,
 		gofmt:     gofmt,
 		walker:    walker,
 	}
@@ -45,33 +54,41 @@ func NewSiteBuilder(rootDir, outDir string) (*SiteBuilder, error) {
 	return sb, nil
 }
 
-func (me *SiteBuilder) WriteSources() error {
+func (me *SiteBuilder) writeSources() error {
 	return nil
 }
 
-func (me *SiteBuilder) FormatSources() error {
+func (me *SiteBuilder) formatSources() error {
+	return nil
+}
+
+func (me *SiteBuilder) Build() error {
+	err := me.writeSources()
+	if err != nil {
+		return err
+	}
+
+	if me.Format {
+		err = me.formatSources()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func BuildMain(rootDir, outDir string, format bool) int {
-	builder, err := NewSiteBuilder(rootDir, outDir)
+	builder, err := NewSiteBuilder(rootDir, outDir, format)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 1
 	}
 
-	err = builder.WriteSources()
+	err = builder.Build()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 2
-	}
-
-	if format {
-		err = builder.FormatSources()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-			return 3
-		}
 	}
 
 	return 0

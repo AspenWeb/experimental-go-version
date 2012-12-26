@@ -442,3 +442,29 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 		t.Errorf("Tree walking yielded unexpected number of files: %v", n)
 	}
 }
+
+func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
+	_, err := NewSiteBuilder("/dev/null", ".", false)
+	if err == nil {
+		t.Errorf("New site builder failed to reject invalid root dir!")
+	}
+}
+
+func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
+	_, err := NewSiteBuilder(".", "/dev/null", false)
+	if err == nil {
+		t.Errorf("New site builder failed to reject invalid output dir!")
+	}
+}
+
+func TestNewSiteBuilderRequiresGofmtInPathIfFormatRequested(t *testing.T) {
+	origPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", origPath)
+
+	os.Setenv("PATH", "/bin")
+
+	_, err := NewSiteBuilder(".", ".", true)
+	if err == nil {
+		t.Errorf("New site builder failed to reject based on missing 'gofmt'!")
+	}
+}
