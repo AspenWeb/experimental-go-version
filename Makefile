@@ -1,5 +1,5 @@
 TARGETS = \
-	github.com/meatballhat/box-o-sand/gotime/smplt
+	github.com/meatballhat/goaspen
 
 test: build
 	go test -x -v $(TARGETS)
