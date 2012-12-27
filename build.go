@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 )
 
 type SiteBuilder struct {
@@ -21,6 +23,16 @@ func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder
 		err   error
 		gofmt string
 	)
+
+	rootDir, err = filepath.Abs(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	outDir, err = filepath.Abs(outDir)
+	if err != nil {
+		return nil, err
+	}
 
 	if format {
 		gofmt, err = exec.LookPath("gofmt")
@@ -61,7 +73,48 @@ func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder
 	return sb, nil
 }
 
+func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
+	if simplate.Type == SIMPLATE_TYPE_STATIC {
+		return nil
+	}
+
+	outname := path.Join(me.OutputDir, simplate.OutputName())
+	debugf("Writing source for %v to %v\n", simplate.Filename, outname)
+
+	outf, err := os.Create(outname)
+	if err != nil {
+		return err
+	}
+
+	debugf(" --> Executing simplate for %v\n", simplate.Filename)
+	err = simplate.Execute(outf)
+	if err != nil {
+		return err
+	}
+	debugf(" --> Done executing simplate for %v\n", simplate.Filename)
+
+	err = outf.Close()
+	if err != nil {
+		return err
+	}
+
+	debugf(" --> Returning nil after writing %v\n", outname)
+	return nil
+}
+
 func (me *SiteBuilder) writeSources() error {
+	simplates, err := me.walker.Simplates()
+	if err != nil {
+		return err
+	}
+
+	for simplate := range simplates {
+		err := me.writeOneSource(simplate)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

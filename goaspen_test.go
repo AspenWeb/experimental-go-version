@@ -116,7 +116,7 @@ func init() {
 	*goCmdAddr = cmd
 
 	noCleanupAddr := &noCleanup
-	*noCleanupAddr = len(os.Getenv("goaspen_TEST_NOCLEANUP")) > 0
+	*noCleanupAddr = len(os.Getenv("GOASPEN_TEST_NOCLEANUP")) > 0
 }
 
 func mkTmpDir() {
@@ -163,14 +163,22 @@ func mkTestSite() string {
 }
 
 func writeRenderedTemplate() (string, error) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		return "", err
+	}
+
 	outfileName := path.Join(goAspenGenDir, s.OutputName())
 	outf, err := os.Create(outfileName)
 	if err != nil {
 		return outfileName, err
 	}
 
-	s.Execute(outf)
+	err = s.Execute(outf)
+	if err != nil {
+		return outfileName, err
+	}
+
 	err = outf.Close()
 	if err != nil {
 		return outfileName, err
@@ -192,7 +200,7 @@ func runGoCommandOnGoAspenGen(command string) error {
 	}
 
 	if noCleanup {
-		log.Println(out.String())
+		fmt.Println(out.String())
 	}
 	return nil
 }
@@ -206,7 +214,12 @@ func buildRenderedTemplate() error {
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
-	s := NewSimplateFromString("hasty-decisions.txt", "herpherpderpherp")
+	s, err := NewSimplateFromString("/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.Filename != "hasty-decisions.txt" {
 		t.Errorf("Simplate filename incorrectly assigned as %s instead of %s",
 			s.Filename, "hasty-decisions.txt")
@@ -214,7 +227,12 @@ func TestSimplateKnowsItsFilename(t *testing.T) {
 }
 
 func TestSimplateKnowsItsContentType(t *testing.T) {
-	s := NewSimplateFromString("hasty-decisions.js", "function herp() { return 'derp'; }")
+	s, err := NewSimplateFromString("/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	expected := mime.TypeByExtension(".js")
 
 	if s.ContentType != expected {
@@ -224,42 +242,72 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 }
 
 func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
-	s := NewSimplateFromString("nothing.txt", "foo\nham\n")
+	s, err := NewSimplateFromString("/tmp", "/tmp/nothing.txt", "foo\nham\n")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.OutputName() != "nothing.txt" {
 		t.Errorf("Static simplate output name is wrong!: %v", s.OutputName())
 	}
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s := NewSimplateFromString("flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.OutputName() != "flip-SLASH-dippy-SPACE-slippy-SLASH-snork-DOT-d-SLASH-basic-rendered-DOT-txt.go" {
 		t.Errorf("Rendered simplate output name is wrong!: %v", s.OutputName())
 	}
 }
 
 func TestDetectsRenderedSimplate(t *testing.T) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.Type != SIMPLATE_TYPE_RENDERED {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_RENDERED)
 	}
 }
 
 func TestDetectsStaticSimplate(t *testing.T) {
-	s := NewSimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.Type != SIMPLATE_TYPE_STATIC {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_STATIC)
 	}
 }
 
 func TestDetectsJSONSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.Type != SIMPLATE_TYPE_JSON {
 		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_JSON)
 	}
 }
 
 func TestDetectsNegotiatedSimplates(t *testing.T) {
-	s := NewSimplateFromString("hork", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/hork", BASIC_NEGOTIATED_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.Type != SIMPLATE_TYPE_NEGOTIATED {
 		t.Errorf("Simplate detected as %s instead of %s",
 			s.Type, SIMPLATE_TYPE_NEGOTIATED)
@@ -267,7 +315,12 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.InitPage != nil {
 		t.Errorf("Static simplate had init page assigned!: %v", s.InitPage)
 	}
@@ -278,14 +331,24 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.InitPage == nil {
 		t.Errorf("Rendered simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if len(s.LogicPages) != 1 {
 		t.Errorf("Rendered simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -293,21 +356,36 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.TemplatePage == nil {
 		t.Errorf("Rendered simplate had no template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.InitPage == nil {
 		t.Errorf("JSON simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if len(s.LogicPages) != 1 {
 		t.Errorf("Rendered simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -315,21 +393,36 @@ func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic.json", BASIC_JSON_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.TemplatePage != nil {
 		t.Errorf("JSON simplate had a template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.InitPage == nil {
 		t.Errorf("Negotiated simplate had no init page assigned!: %v", s.InitPage)
 	}
 }
 
 func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if len(s.LogicPages) < 1 {
 		t.Errorf("Negotiated simplate unexpected number "+
 			"of logic pages assigned!: %v", len(s.LogicPages))
@@ -337,16 +430,26 @@ func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
-	s := NewSimplateFromString("basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	if s.TemplatePage != nil {
 		t.Errorf("Negotiated simplate had a template page assigned!: %v", s.TemplatePage)
 	}
 }
 
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
-	s := NewSimplateFromString("basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	var out bytes.Buffer
-	err := s.Execute(&out)
+	err = s.Execute(&out)
 	if err != nil {
 		t.Error(err)
 	}
@@ -506,5 +609,32 @@ func TestSiteBuilderExposesOutputDir(t *testing.T) {
 	if sb.OutputDir != goAspenGenDir {
 		t.Errorf("OutputDir != %s: %s", goAspenGenDir, sb.OutputDir)
 		return
+	}
+}
+
+func TestSiteBuilderBuildWritesSources(t *testing.T) {
+	mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, false, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	sb.Build()
+
+	fi, err := os.Stat(path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if fi.Size() < int64(len(BASIC_RENDERED_TXT_SIMPLATE)) {
+		t.Errorf("Generated file is too small! %v", fi.Size())
 	}
 }

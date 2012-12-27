@@ -3,7 +3,6 @@ package goaspen
 import (
 	"errors"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -36,7 +35,7 @@ func (me *TreeWalker) Simplates() (<-chan *Simplate, error) {
 		filepath.Walk(me.Root,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					log.Println("TreeWalker error:", err)
+					debugf("TreeWalker error:", err)
 					return nil
 				}
 
@@ -56,7 +55,11 @@ func (me *TreeWalker) Simplates() (<-chan *Simplate, error) {
 					return err
 				}
 
-				schan <- NewSimplateFromString(path, string(content))
+				smplt, err := NewSimplateFromString(me.Root, path, string(content))
+				if err != nil {
+					return err
+				}
+				schan <- smplt
 				return nil
 			})
 		close(schan)

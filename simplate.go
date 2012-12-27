@@ -1,9 +1,12 @@
 package goaspen
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -23,9 +26,9 @@ var (
 		SIMPLATE_TYPE_STATIC,
 	}
 	simplateGenFileTmpl = template.Must(template.New("goaspen-gen").Parse(strings.Replace(`
-/* GENERATED FILE - DO NOT EDIT */
-/* Rebuild with simplate filesystem parsing thingy! */
 package goaspen_gen
+// GENERATED FILE - DO NOT EDIT
+// Rebuild with simplate filesystem parsing thingy!
 
 import (
     "bytes"
@@ -74,6 +77,7 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
 )
 
 type Simplate struct {
+	SiteRoot     string
 	Filename     string
 	Type         string
 	ContentType  string
@@ -86,11 +90,24 @@ type SimplatePage struct {
 	Body string
 }
 
-func NewSimplateFromString(filename, content string) *Simplate {
+func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error) {
+	var err error
+
+	filename, err = filepath.Abs(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	filename, err = filepath.Rel(siteRoot, filename)
+	if err != nil {
+		return nil, err
+	}
+
 	rawPages := strings.Split(content, "")
 	nbreaks := len(rawPages) - 1
 
 	s := &Simplate{
+		SiteRoot:    siteRoot,
 		Filename:    filename,
 		Type:        SIMPLATE_TYPE_STATIC,
 		ContentType: mime.TypeByExtension(path.Ext(filename)),
@@ -107,7 +124,7 @@ func NewSimplateFromString(filename, content string) *Simplate {
 			s.TemplatePage = &SimplatePage{Body: rawPages[2]}
 		}
 
-		return s
+		return s, nil
 	}
 
 	if nbreaks > 2 {
@@ -118,18 +135,31 @@ func NewSimplateFromString(filename, content string) *Simplate {
 			s.LogicPages = append(s.LogicPages, &SimplatePage{Body: rawPage})
 		}
 
-		return s
+		return s, nil
 	}
 
-	return s
+	return s, nil
 }
 
-func (me *Simplate) Execute(wr io.Writer) error {
-	return simplateGenFileTmpl.Execute(wr, me)
+func (me *Simplate) Execute(wr io.Writer) (err error) {
+	errAddr := &err
+
+	defer func(err *error) {
+		r := recover()
+		if r != nil {
+			*err = errors.New(fmt.Sprintf("%v", r))
+		}
+	}(errAddr)
+
+	debugf("Executing to %s\n", wr)
+	*errAddr = simplateGenFileTmpl.Execute(wr, me)
+
+	return
 }
 
 func (me *Simplate) escapedFilename() string {
-	lessDots := strings.Replace(me.Filename, ".", "-DOT-", -1)
+	fn := filepath.Clean(me.Filename)
+	lessDots := strings.Replace(fn, ".", "-DOT-", -1)
 	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
 	return strings.Replace(lessSlashes, " ", "-SPACE-", -1)
 }
@@ -162,5 +192,5 @@ func (me *Simplate) ConstName() string {
 }
 
 func (me *Simplate) HasTemplatePage() bool {
-	return len(me.TemplatePage.Body) > 0
+	return me.TemplatePage != nil && len(me.TemplatePage.Body) > 0
 }
