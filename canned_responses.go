@@ -1,7 +1,7 @@
 package goaspen
 
 var (
-	HTTP_500_RESPONSE = []byte(`
+	http500Response = []byte(`
 <!DOCTYPE html>
 <html>
   <head>

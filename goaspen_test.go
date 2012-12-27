@@ -24,12 +24,12 @@ import (
     "time"
 )
 
-type Dance struct {
+type RDance struct {
     Who  string
     When time.Time
 }
 
-ctx["D"] = &Dance{
+ctx["D"] = &RDance{
     Who:  "Everybody",
     When: time.Now(),
 }
@@ -44,28 +44,28 @@ import (
     "time"
 )
 
-type Dance struct {
+type JDance struct {
     Who  string
     When time.Time
 }
 
-ctx["D"] = &Dance{
+ctx["D"] = &JDance{
     Who:  "Everybody",
     When: time.Now(),
-response.SetBody(ctx["D"])
 }
+response.SetBody(ctx["D"])
 `
 	BASIC_NEGOTIATED_SIMPLATE = `
 import (
     "time"
 )
 
-type Dance struct {
+type NDance struct {
     Who  string
     When time.Time
 }
 
-ctx["D"] = &Dance{
+ctx["D"] = &NDance{
     Who:  "Everybody",
     When: time.Now(),
 }
@@ -325,8 +325,8 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 		t.Errorf("Static simplate had init page assigned!: %v", s.InitPage)
 	}
 
-	if len(s.LogicPages) > 0 {
-		t.Errorf("Static simplate had logic pages assigned!: %v", s.LogicPages)
+	if s.LogicPage != nil {
+		t.Errorf("Static simplate had logic page assigned!: %v", s.LogicPage)
 	}
 }
 
@@ -349,9 +349,8 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 		return
 	}
 
-	if len(s.LogicPages) != 1 {
-		t.Errorf("Rendered simplate unexpected number "+
-			"of logic pages assigned!: %v", len(s.LogicPages))
+	if s.LogicPage == nil {
+		t.Errorf("Rendered simplate logic page not assigned!: %v", s.LogicPage)
 	}
 }
 
@@ -362,8 +361,8 @@ func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
 		return
 	}
 
-	if s.TemplatePage == nil {
-		t.Errorf("Rendered simplate had no template page assigned!: %v", s.TemplatePage)
+	if len(s.TemplatePages) == 0 {
+		t.Errorf("Rendered simplate had no template pages assigned!: %v", s.TemplatePages)
 	}
 }
 
@@ -379,16 +378,15 @@ func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
 	}
 }
 
-func TestAssignsOneLogicPageToJSONSimplates(t *testing.T) {
+func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
 	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if len(s.LogicPages) != 1 {
-		t.Errorf("Rendered simplate unexpected number "+
-			"of logic pages assigned!: %v", len(s.LogicPages))
+	if s.LogicPage == nil {
+		t.Errorf("Rendered simplate logic page not assigned!: %v", s.LogicPage)
 	}
 }
 
@@ -399,8 +397,8 @@ func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
 		return
 	}
 
-	if s.TemplatePage != nil {
-		t.Errorf("JSON simplate had a template page assigned!: %v", s.TemplatePage)
+	if len(s.TemplatePages) > 0 {
+		t.Errorf("JSON simplate had template page(s) assigned!: %v", s.TemplatePages)
 	}
 }
 
@@ -416,28 +414,15 @@ func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
 	}
 }
 
-func TestAssignsAtLeastOneLogicPageToNegotiatedSimplates(t *testing.T) {
+func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
 	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if len(s.LogicPages) < 1 {
-		t.Errorf("Negotiated simplate unexpected number "+
-			"of logic pages assigned!: %v", len(s.LogicPages))
-	}
-}
-
-func TestAssignsNoTemplatePageToNegotiatedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if s.TemplatePage != nil {
-		t.Errorf("Negotiated simplate had a template page assigned!: %v", s.TemplatePage)
+	if s.LogicPage == nil {
+		t.Errorf("Negotiated simplate logic page not assigned!: %v", s.LogicPage)
 	}
 }
 

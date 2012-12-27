@@ -25,69 +25,34 @@ var (
 		SIMPLATE_TYPE_RENDERED,
 		SIMPLATE_TYPE_STATIC,
 	}
-	simplateGenFileTmpl = template.Must(template.New("goaspen-gen").Parse(strings.Replace(`
-package goaspen_gen
-// GENERATED FILE - DO NOT EDIT
-// Rebuild with simplate filesystem parsing thingy!
-
-import (
-    "bytes"
-    "net/http"
-    "text/template"
-
-    "github.com/meatballhat/goaspen"
-)
-
-{{.InitPage.Body}}
-
-{{if .HasTemplatePage}}
-const (
-    SIMPLATE_TMPL_{{.ConstName}} = __BACKTICK__{{.TemplatePage.Body}}__BACKTICK__
-)
-
-var (
-    simplateTmpl{{.FuncName}} = template.Must(template.New("{{.FuncName}}").Parse(SIMPLATE_TMPL_{{.ConstName}}))
-)
-{{end}}
-
-func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
-    var err error
-    ctx := make(map[string]interface{})
-
-    {{range .LogicPages}}
-        {{.Body}}
-    {{end}}
-
-    {{if .HasTemplatePage}}
-    var tmplBuf bytes.Buffer
-    err = simplateTmpl{{.FuncName}}.Execute(&tmplBuf, ctx)
-    if err != nil {
-        w.Header().Set("Content-Type", "text/html")
-        w.WriteHeader(http.StatusInternalServerError)
-        w.Write(goaspen.HTTP_500_RESPONSE)
-        return
-    }
-
-    w.Header().Set("Content-Type", "{{.ContentType}}")
-    w.WriteHeader(http.StatusOK)
-    w.Write(tmplBuf.Bytes())
-    {{end}}
-}
-`, "__BACKTICK__", "`", -1)))
+	simplateTypeTemplates = map[string]*template.Template{
+		SIMPLATE_TYPE_JSON:       escapedSimplateTemplate(simplateTypeJSONTmpl, "goaspen-gen-json"),
+		SIMPLATE_TYPE_RENDERED:   escapedSimplateTemplate(simplateTypeRenderedTmpl, "goaspen-gen-rendered"),
+		SIMPLATE_TYPE_NEGOTIATED: escapedSimplateTemplate(simplateTypeNegotiatedTmpl, "goaspen-gen-negotiated"),
+		SIMPLATE_TYPE_STATIC:     nil,
+	}
+	defaultRenderer = "#!go/text/template"
 )
 
 type Simplate struct {
-	SiteRoot     string
-	Filename     string
-	Type         string
-	ContentType  string
-	InitPage     *SimplatePage
-	LogicPages   []*SimplatePage
-	TemplatePage *SimplatePage
+	SiteRoot      string
+	Filename      string
+	Type          string
+	ContentType   string
+	InitPage      *SimplatePage
+	LogicPage     *SimplatePage
+	TemplatePages []*SimplatePage
 }
 
 type SimplatePage struct {
-	Body string
+	Parent *Simplate
+	Body   string
+	Spec   *SimplatePageSpec
+}
+
+type SimplatePageSpec struct {
+	ContentType string
+	Renderer    string
 }
 
 func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error) {
@@ -114,14 +79,26 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 	}
 
 	if nbreaks == 1 || nbreaks == 2 {
-		s.InitPage = &SimplatePage{Body: rawPages[0]}
-		s.LogicPages = append(s.LogicPages, &SimplatePage{Body: rawPages[1]})
+		s.InitPage, err = NewSimplatePage(s, rawPages[0], false)
+		if err != nil {
+			return nil, err
+		}
+
+		s.LogicPage, err = NewSimplatePage(s, rawPages[1], false)
+		if err != nil {
+			return nil, err
+		}
 
 		if s.ContentType == "application/json" {
 			s.Type = SIMPLATE_TYPE_JSON
 		} else {
 			s.Type = SIMPLATE_TYPE_RENDERED
-			s.TemplatePage = &SimplatePage{Body: rawPages[2]}
+			templatePage, err := NewSimplatePage(s, rawPages[2], true)
+			if err != nil {
+				return nil, err
+			}
+
+			s.TemplatePages = append(s.TemplatePages, templatePage)
 		}
 
 		return s, nil
@@ -129,16 +106,37 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 
 	if nbreaks > 2 {
 		s.Type = SIMPLATE_TYPE_NEGOTIATED
-		s.InitPage = &SimplatePage{Body: rawPages[0]}
+		s.InitPage, err = NewSimplatePage(s, rawPages[0], false)
+		if err != nil {
+			return nil, err
+		}
 
-		for _, rawPage := range rawPages {
-			s.LogicPages = append(s.LogicPages, &SimplatePage{Body: rawPage})
+		s.LogicPage, err = NewSimplatePage(s, rawPages[1], false)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, rawPage := range rawPages[2:] {
+			templatePage, err := NewSimplatePage(s, rawPage, true)
+			if err != nil {
+				return nil, err
+			}
+
+			s.TemplatePages = append(s.TemplatePages, templatePage)
 		}
 
 		return s, nil
 	}
 
 	return s, nil
+}
+
+func (me *Simplate) FirstTemplatePage() *SimplatePage {
+	if len(me.TemplatePages) > 0 {
+		return me.TemplatePages[0]
+	}
+
+	return nil
 }
 
 func (me *Simplate) Execute(wr io.Writer) (err error) {
@@ -152,8 +150,7 @@ func (me *Simplate) Execute(wr io.Writer) (err error) {
 	}(errAddr)
 
 	debugf("Executing to %s\n", wr)
-	*errAddr = simplateGenFileTmpl.Execute(wr, me)
-
+	*errAddr = simplateTypeTemplates[me.Type].Execute(wr, me)
 	return
 }
 
@@ -191,6 +188,73 @@ func (me *Simplate) ConstName() string {
 	return strings.Replace(uppered, "-", "_", -1)
 }
 
-func (me *Simplate) HasTemplatePage() bool {
-	return me.TemplatePage != nil && len(me.TemplatePage.Body) > 0
+func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec, error) {
+	sps := &SimplatePageSpec{
+		ContentType: simplate.ContentType,
+		Renderer:    defaultRenderer,
+	}
+
+	switch simplate.Type {
+	case SIMPLATE_TYPE_STATIC:
+		return &SimplatePageSpec{}, nil
+	case SIMPLATE_TYPE_JSON:
+		return sps, nil
+	case SIMPLATE_TYPE_RENDERED:
+		renderer := specline
+		if len(renderer) < 1 {
+			renderer = defaultRenderer
+		}
+
+		sps.Renderer = renderer
+		return sps, nil
+	case SIMPLATE_TYPE_NEGOTIATED:
+		parts := strings.Fields(specline)
+		nParts := len(parts)
+
+		if nParts < 1 || nParts > 2 {
+			return nil, errors.New(fmt.Sprintf("A negotiated resource specline "+
+				"must have one or two parts: #!renderer media/type. Yours is %q",
+				specline))
+		}
+
+		if nParts == 1 {
+			sps.ContentType = parts[0]
+			sps.Renderer = defaultRenderer
+			return sps, nil
+		} else {
+			sps.ContentType = parts[0]
+			sps.Renderer = parts[1]
+			return sps, nil
+		}
+	}
+
+	return nil, errors.New(fmt.Sprintf("Can't make a page spec "+
+		"for simplate type %q", simplate.Type))
+}
+
+func NewSimplatePage(simplate *Simplate, rawPage string, needsSpec bool) (*SimplatePage, error) {
+	spec := &SimplatePageSpec{}
+	var err error
+
+	specline := ""
+	body := rawPage
+
+	if needsSpec {
+		parts := strings.SplitN(rawPage, "\n", 2)
+		specline = parts[0]
+		body = parts[1]
+
+		spec, err = NewSimplatePageSpec(simplate,
+			strings.TrimSpace(strings.Replace(specline, "", "", -1)))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sp := &SimplatePage{
+		Parent: simplate,
+		Body:   body,
+		Spec:   spec,
+	}
+	return sp, nil
 }
