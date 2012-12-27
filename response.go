@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	defaultAcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+	defaultAcceptHeader = "text/html,application/xhtml+xml," +
+		"application/xml;q=0.9,*/*;q=0.8"
 )
 
 type HTTPResponseWrapper struct {
