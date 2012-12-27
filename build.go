@@ -3,6 +3,8 @@ package goaspen
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -118,7 +120,70 @@ func (me *SiteBuilder) writeSources() error {
 	return nil
 }
 
+func (me *SiteBuilder) formatOneSource(sourceFile string) error {
+	in, err := os.Open(sourceFile)
+	if err != nil {
+		return err
+	}
+
+	defer in.Close()
+
+	tmpOut, err := ioutil.TempFile("", "goaspen-gofmt")
+	if err != nil {
+		return err
+	}
+
+	defer os.Remove(tmpOut.Name())
+
+	formatCmd := exec.Command(me.gofmt)
+	formatCmd.Stdin = in
+	formatCmd.Stdout = tmpOut
+
+	err = formatCmd.Run()
+	if err != nil {
+		defer tmpOut.Close()
+		return err
+	}
+
+	pos, err := tmpOut.Seek(int64(0), 0)
+	if err != nil {
+		return err
+	}
+
+	if pos != int64(0) {
+		return errors.New("Failed to seek temporary file to 0!")
+	}
+
+	out, err := os.Create(sourceFile)
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, tmpOut)
+	if err != nil {
+		return err
+	}
+
+	tmpOut.Close()
+
+	return nil
+}
+
 func (me *SiteBuilder) formatSources() error {
+	sources, err := filepath.Glob(path.Join(me.OutputDir, "*.go"))
+	if err != nil {
+		return err
+	}
+
+	for _, source := range sources {
+		err = me.formatOneSource(source)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -2,9 +2,12 @@ package goaspen_test
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io"
+	"io/ioutil"
 	"log"
 	"mime"
 	"os"
@@ -205,11 +208,11 @@ func runGoCommandOnGoAspenGen(command string) error {
 	return nil
 }
 
-func formatRenderedTemplate() error {
+func formatGoAspenGen() error {
 	return runGoCommandOnGoAspenGen("fmt")
 }
 
-func buildRenderedTemplate() error {
+func buildGoAspenGen() error {
 	return runGoCommandOnGoAspenGen("install")
 }
 
@@ -476,13 +479,13 @@ func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 		return
 	}
 
-	err = formatRenderedTemplate()
+	err = formatGoAspenGen()
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = buildRenderedTemplate()
+	err = buildGoAspenGen()
 	if err != nil {
 		t.Error(err)
 		return
@@ -611,7 +614,11 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		return
 	}
 
-	sb.Build()
+	err = sb.Build()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	fi, err := os.Stat(path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go"))
 	if err != nil {
@@ -621,5 +628,76 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 
 	if fi.Size() < int64(len(BASIC_RENDERED_TXT_SIMPLATE)) {
 		t.Errorf("Generated file is too small! %v", fi.Size())
+	}
+}
+
+func TestSiteBuilderBuildFormatsSources(t *testing.T) {
+	mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = sb.Build()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fileName := path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go")
+
+	fd, err := os.Open(fileName)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fileContent, err := ioutil.ReadAll(fd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = fd.Close()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	firstHash := sha1.New()
+	io.WriteString(firstHash, string(fileContent))
+	firstSum := fmt.Sprintf("%x", firstHash.Sum(nil))
+
+	err = formatGoAspenGen()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fd, err = os.Open(fileName)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fileContent, err = ioutil.ReadAll(fd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	secondHash := sha1.New()
+	io.WriteString(secondHash, string(fileContent))
+	secondSum := fmt.Sprintf("%x", secondHash.Sum(nil))
+
+	if firstSum != secondSum {
+		t.Errorf("Hash for %q changed!", fileName)
 	}
 }
