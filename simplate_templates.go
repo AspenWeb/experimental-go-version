@@ -32,7 +32,7 @@ const (
 
 var (
     simplateTmpl{{.FuncName}} = template.Must(template.New("{{.FuncName}}").Parse(SIMPLATE_TMPL_{{.ConstName}}))
-    _ = goaspen.HandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    _ = goaspen.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
 )
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
@@ -61,7 +61,7 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
 {{.InitPage.Body}}
 
 var (
-    _ = goaspen.HandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    _ = goaspen.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
 )
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
@@ -95,7 +95,7 @@ var (
         "{{.Spec.ContentType}}": template.Must(template.New("{{.Parent.FuncName}}!{{.Spec.ContentType}}").Parse(__BACKTICK__{{.Body}}__BACKTICK__)),
         {{end}}
     }
-    _ = goaspen.HandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    _ = goaspen.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
 )
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {

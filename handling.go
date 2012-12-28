@@ -1,16 +1,31 @@
 package goaspen
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 )
 
 var (
-	handlerFuncRegistrations map[string]func(http.ResponseWriter, *http.Request)
+	handlerFuncRegistrations map[string](*HandlerFuncRegistration)
 )
 
-func HandlerFuncRegistration(requestPath string,
-	handler func(http.ResponseWriter, *http.Request)) error {
+type HandlerFuncRegistration struct {
+	RequestPath string
+	HandlerFunc func(http.ResponseWriter, *http.Request)
+}
 
-	handlerFuncRegistrations[requestPath] = handler
-	return nil
+func NewHandlerFuncRegistration(requestPath string,
+	handler func(http.ResponseWriter, *http.Request)) *HandlerFuncRegistration {
+
+	if len(requestPath) < 1 {
+		panic(errors.New(fmt.Sprintf("Invalid request path %q", requestPath)))
+	}
+
+	handlerFuncRegistrations[requestPath] = &HandlerFuncRegistration{
+		RequestPath: requestPath,
+		HandlerFunc: handler,
+	}
+
+	return handlerFuncRegistrations[requestPath]
 }
