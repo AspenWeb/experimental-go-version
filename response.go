@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	//"bitbucket.org/ww/goautoneg" // TODO use this once gofix patch gets accepted
-	"github.com/meatballhat/goaspen/goautoneg"
+	"bitbucket.org/ww/goautoneg"
 )
 
 var (
