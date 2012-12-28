@@ -36,14 +36,22 @@ func main() {
 	outDir := path.Join(rootDir, ".build", "src", "goaspen_gen")
 	format := false
 	mkOutDir := false
+	genPkg := goaspen.DefaultGenPackage
 
 	flag.StringVar(&rootDir, "d", rootDir, "Root directory")
 	flag.StringVar(&outDir, "o", outDir, "Output directory for generated sources")
+	flag.StringVar(&genPkg, "p", genPkg, "Generated source package name")
 	flag.BoolVar(&format, "f", format, "Format generated sources")
 	flag.BoolVar(&mkOutDir, "m", mkOutDir, "Make output directory if not exists")
 	flag.Usage = usage
 	flag.Parse()
 
-	retcode := goaspen.BuildMain(rootDir, outDir, format, mkOutDir)
+	retcode := goaspen.BuildMain(&goaspen.SiteBuilderCfg{
+		RootDir:    rootDir,
+		OutputDir:  outDir,
+		GenPackage: genPkg,
+		Format:     format,
+		MkOutDir:   mkOutDir,
+	})
 	os.Exit(retcode)
 }

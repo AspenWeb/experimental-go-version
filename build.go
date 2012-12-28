@@ -11,39 +11,58 @@ import (
 	"path/filepath"
 )
 
+var (
+	DefaultGenPackage = "goaspen_gen"
+)
+
 type SiteBuilder struct {
-	RootDir   string
-	OutputDir string
-	Format    bool
+	RootDir    string
+	OutputDir  string
+	GenPackage string
+	Format     bool
 
 	gofmt  string
 	walker *TreeWalker
 }
 
-func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder, error) {
+type SiteBuilderCfg struct {
+	RootDir    string
+	OutputDir  string
+	GenPackage string
+	Format     bool
+	MkOutDir   bool
+}
+
+//func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder, error) {
+func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 	var (
 		err   error
 		gofmt string
 	)
 
-	rootDir, err = filepath.Abs(rootDir)
+	rootDir, err := filepath.Abs(cfg.RootDir)
 	if err != nil {
 		return nil, err
 	}
 
-	outDir, err = filepath.Abs(outDir)
+	outDir, err := filepath.Abs(cfg.OutputDir)
 	if err != nil {
 		return nil, err
 	}
 
-	if format {
+	genPkg := cfg.GenPackage
+	if len(genPkg) == 0 {
+		genPkg = DefaultGenPackage
+	}
+
+	if cfg.Format {
 		gofmt, err = exec.LookPath("gofmt")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if mkOutDir {
+	if cfg.MkOutDir {
 		err = os.MkdirAll(outDir, os.ModeDir|os.ModePerm)
 		if err != nil {
 			return nil, err
@@ -65,11 +84,12 @@ func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder
 	}
 
 	sb := &SiteBuilder{
-		RootDir:   rootDir,
-		OutputDir: outDir,
-		Format:    format,
-		gofmt:     gofmt,
-		walker:    walker,
+		RootDir:    rootDir,
+		OutputDir:  outDir,
+		GenPackage: genPkg,
+		Format:     cfg.Format,
+		gofmt:      gofmt,
+		walker:     walker,
 	}
 
 	return sb, nil
@@ -203,8 +223,8 @@ func (me *SiteBuilder) Build() error {
 	return nil
 }
 
-func BuildMain(rootDir, outDir string, format, mkOutDir bool) int {
-	builder, err := NewSiteBuilder(rootDir, outDir, format, mkOutDir)
+func BuildMain(cfg *SiteBuilderCfg) int {
+	builder, err := NewSiteBuilder(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 1

@@ -535,16 +535,37 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 }
 
 func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
-	_, err := NewSiteBuilder("/dev/null", ".", false, false)
+	_, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   "/dev/null",
+		OutputDir: ".",
+	})
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid root dir!")
 	}
 }
 
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
-	_, err := NewSiteBuilder(".", "/dev/null", false, false)
+	_, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   ".",
+		OutputDir: "/dev/null",
+	})
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid output dir!")
+	}
+}
+
+func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   ".",
+		OutputDir: ".",
+	})
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if sb.GenPackage != "goaspen_gen" {
+		t.Errorf("Generated package default != \"goaspen_gen\": %q", sb.GenPackage)
 	}
 }
 
@@ -554,7 +575,11 @@ func TestNewSiteBuilderRequiresGofmtInPathIfFormatRequested(t *testing.T) {
 
 	os.Setenv("PATH", "/bin")
 
-	_, err := NewSiteBuilder(".", ".", true, false)
+	_, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   ".",
+		OutputDir: ".",
+		Format:    true,
+	})
 	if err == nil {
 		t.Errorf("New site builder failed to reject based on missing 'gofmt'!")
 	}
@@ -568,7 +593,12 @@ func TestSiteBuilderExposesRootDir(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   testSiteRoot,
+		OutputDir: goAspenGenDir,
+		Format:    true,
+		MkOutDir:  true,
+	})
 	if err != nil {
 		t.Error(err)
 		return
@@ -588,7 +618,12 @@ func TestSiteBuilderExposesOutputDir(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   testSiteRoot,
+		OutputDir: goAspenGenDir,
+		Format:    true,
+		MkOutDir:  true,
+	})
 	if err != nil {
 		t.Error(err)
 		return
@@ -608,7 +643,11 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, false, true)
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   testSiteRoot,
+		OutputDir: goAspenGenDir,
+		MkOutDir:  true,
+	})
 	if err != nil {
 		t.Error(err)
 		return
@@ -639,7 +678,12 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(testSiteRoot, goAspenGenDir, true, true)
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   testSiteRoot,
+		OutputDir: goAspenGenDir,
+		Format:    true,
+		MkOutDir:  true,
+	})
 	if err != nil {
 		t.Error(err)
 		return
