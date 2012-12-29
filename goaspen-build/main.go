@@ -33,9 +33,11 @@ func main() {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	outDir := path.Join(rootDir, ".build", "src", "goaspen_gen")
+	outDir := goaspen.DefaultOutputDir
 	format := false
 	mkOutDir := false
+	debug := false
+	noCompile := false
 	genPkg := goaspen.DefaultGenPackage
 
 	flag.StringVar(&rootDir, "d", rootDir, "Root directory")
@@ -43,8 +45,12 @@ func main() {
 	flag.StringVar(&genPkg, "p", genPkg, "Generated source package name")
 	flag.BoolVar(&format, "f", format, "Format generated sources")
 	flag.BoolVar(&mkOutDir, "m", mkOutDir, "Make output directory if not exists")
+	flag.BoolVar(&debug, "x", debug, "Print debugging output")
+	flag.BoolVar(&noCompile, "Z", noCompile, "Don't compile generated sources")
 	flag.Usage = usage
 	flag.Parse()
+
+	goaspen.SetDebug(debug)
 
 	retcode := goaspen.BuildMain(&goaspen.SiteBuilderCfg{
 		RootDir:    rootDir,
@@ -52,6 +58,7 @@ func main() {
 		GenPackage: genPkg,
 		Format:     format,
 		MkOutDir:   mkOutDir,
+		NoCompile:  noCompile,
 	})
 	os.Exit(retcode)
 }

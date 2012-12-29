@@ -9,10 +9,13 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
 	DefaultGenPackage = "goaspen_gen"
+	DefaultOutputDir  string
+	defaultOutDirAddr = &DefaultOutputDir
 )
 
 type SiteBuilder struct {
@@ -20,6 +23,7 @@ type SiteBuilder struct {
 	OutputDir  string
 	GenPackage string
 	Format     bool
+	NoCompile  bool
 
 	gofmt  string
 	walker *TreeWalker
@@ -31,9 +35,14 @@ type SiteBuilderCfg struct {
 	GenPackage string
 	Format     bool
 	MkOutDir   bool
+	NoCompile  bool
 }
 
-//func NewSiteBuilder(rootDir, outDir string, format, mkOutDir bool) (*SiteBuilder, error) {
+func init() {
+	topGopath := strings.Split(os.Getenv("GOPATH"), ":")[0]
+	*defaultOutDirAddr = path.Join(topGopath, "src", "goaspen_gen")
+}
+
 func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 	var (
 		err   error
@@ -88,8 +97,10 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		OutputDir:  outDir,
 		GenPackage: genPkg,
 		Format:     cfg.Format,
-		gofmt:      gofmt,
-		walker:     walker,
+		NoCompile:  cfg.NoCompile,
+
+		gofmt:  gofmt,
+		walker: walker,
 	}
 
 	return sb, nil
@@ -137,6 +148,10 @@ func (me *SiteBuilder) writeSources() error {
 		}
 	}
 
+	return nil
+}
+
+func (me *SiteBuilder) compileSources() error {
 	return nil
 }
 
@@ -215,6 +230,13 @@ func (me *SiteBuilder) Build() error {
 
 	if me.Format {
 		err = me.formatSources()
+		if err != nil {
+			return err
+		}
+	}
+
+	if !me.NoCompile {
+		err = me.compileSources()
 		if err != nil {
 			return err
 		}

@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	isDebug     bool = false
-	isDebugAddr      = &isDebug
+	isDebug     = false
+	isDebugAddr = &isDebug
 )
 
 func init() {
@@ -18,4 +18,8 @@ func debugf(format string, v ...interface{}) {
 	if isDebug {
 		log.Printf("DEBUG:"+format, v...)
 	}
+}
+
+func SetDebug(truth bool) {
+	*isDebugAddr = truth
 }

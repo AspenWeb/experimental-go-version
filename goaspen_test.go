@@ -569,22 +569,6 @@ func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
 	}
 }
 
-func TestNewSiteBuilderRequiresGofmtInPathIfFormatRequested(t *testing.T) {
-	origPath := os.Getenv("PATH")
-	defer os.Setenv("PATH", origPath)
-
-	os.Setenv("PATH", "/bin")
-
-	_, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   ".",
-		OutputDir: ".",
-		Format:    true,
-	})
-	if err == nil {
-		t.Errorf("New site builder failed to reject based on missing 'gofmt'!")
-	}
-}
-
 func TestSiteBuilderExposesRootDir(t *testing.T) {
 	mkTestSite()
 	if noCleanup {
@@ -647,6 +631,7 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		RootDir:   testSiteRoot,
 		OutputDir: goAspenGenDir,
 		MkOutDir:  true,
+		NoCompile: true,
 	})
 	if err != nil {
 		t.Error(err)
@@ -683,6 +668,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		OutputDir: goAspenGenDir,
 		Format:    true,
 		MkOutDir:  true,
+		NoCompile: true,
 	})
 	if err != nil {
 		t.Error(err)
@@ -745,3 +731,41 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		t.Errorf("Hash for %q changed!", fileName)
 	}
 }
+
+/*
+func TestNewSiteBuilderCompilesSources(t *testing.T) {
+	mkTestSite()
+	if noCleanup {
+		fmt.Println("tmpdir =", tmpdir)
+	} else {
+		defer rmTmpDir()
+	}
+
+	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+		RootDir:   testSiteRoot,
+		OutputDir: goAspenGenDir,
+		Format:    true,
+		MkOutDir:  true,
+	})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = sb.Build()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fi, err := os.Stat(path.Join(sb.OutputDir, "goaspen_gen-server"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if fi.Mode() != (os.FileMode)(0755) {
+		t.Errorf("Site server binary permissions != %v: %v", 0755, fi.Mode())
+	}
+}
+*/
