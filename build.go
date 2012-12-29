@@ -1,52 +1,77 @@
 package goaspen
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 var (
-	DefaultGenPackage = "goaspen_gen"
-	DefaultOutputDir  string
-	defaultOutDirAddr = &DefaultOutputDir
+	DefaultGenPackage   = "goaspen_gen"
+	DefaultOutputGopath string
+	defaultOutDirAddr   = &DefaultOutputGopath
+	genServerTemplate   = template.Must(template.New("goaspen-genserver").Parse(`
+package main
+// GENERATED FILE - DO NOT EDIT
+// Rebuild with goaspen-build!
+
+import (
+    "fmt"
+    "net/http"
+
+    "github.com/meatballhat/goaspen"
+    _ "{{.GenPackage}}"
+)
+
+func main() {
+    for _, reg := range goaspen.HandlerFuncRegistrations {
+        http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
+    }
+
+    fmt.Println("{{.GenPackage}}-server serving on {{.GenServerBind}}")
+    http.ListenAndServe("{{.GenServerBind}}", nil)
+}
+`))
 )
 
 type SiteBuilder struct {
-	RootDir    string
-	OutputDir  string
-	GenPackage string
-	Format     bool
-	NoCompile  bool
+	RootDir       string
+	OutputGopath  string
+	GenPackage    string
+	GenServerBind string
+	Format        bool
+	Compile       bool
 
-	gofmt  string
-	walker *TreeWalker
+	goexe       string
+	walker      *TreeWalker
+	packagePath string
+	genServer   string
 }
 
 type SiteBuilderCfg struct {
-	RootDir    string
-	OutputDir  string
-	GenPackage string
-	Format     bool
-	MkOutDir   bool
-	NoCompile  bool
+	RootDir       string
+	OutputGopath  string
+	GenPackage    string
+	GenServerBind string
+	Format        bool
+	MkOutDir      bool
+	Compile       bool
 }
 
 func init() {
-	topGopath := strings.Split(os.Getenv("GOPATH"), ":")[0]
-	*defaultOutDirAddr = path.Join(topGopath, "src", "goaspen_gen")
+	*defaultOutDirAddr = strings.Split(os.Getenv("GOPATH"), ":")[0]
 }
 
 func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 	var (
 		err   error
-		gofmt string
+		goexe string
 	)
 
 	rootDir, err := filepath.Abs(cfg.RootDir)
@@ -54,7 +79,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		return nil, err
 	}
 
-	outDir, err := filepath.Abs(cfg.OutputDir)
+	outPath, err := filepath.Abs(cfg.OutputGopath)
 	if err != nil {
 		return nil, err
 	}
@@ -64,26 +89,26 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		genPkg = DefaultGenPackage
 	}
 
-	if cfg.Format {
-		gofmt, err = exec.LookPath("gofmt")
+	if cfg.Compile || cfg.Format {
+		goexe, err = exec.LookPath("go")
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if cfg.MkOutDir {
-		err = os.MkdirAll(outDir, os.ModeDir|os.ModePerm)
+		err = os.MkdirAll(outPath, os.ModeDir|os.ModePerm)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		outDirFi, err := os.Stat(outDir)
+		outPathFi, err := os.Stat(outPath)
 		if err != nil {
 			return nil, err
 		}
 
-		if !outDirFi.IsDir() {
-			return nil, errors.New(fmt.Sprintf("Invalid build output directory specified: %v", outDir))
+		if !outPathFi.IsDir() {
+			return nil, errors.New(fmt.Sprintf("Invalid build output directory specified: %v", outPath))
 		}
 	}
 
@@ -93,14 +118,17 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 	}
 
 	sb := &SiteBuilder{
-		RootDir:    rootDir,
-		OutputDir:  outDir,
-		GenPackage: genPkg,
-		Format:     cfg.Format,
-		NoCompile:  cfg.NoCompile,
+		RootDir:       rootDir,
+		OutputGopath:  outPath,
+		GenPackage:    genPkg,
+		GenServerBind: cfg.GenServerBind,
+		Format:        cfg.Format,
+		Compile:       cfg.Compile,
 
-		gofmt:  gofmt,
-		walker: walker,
+		goexe:       goexe,
+		walker:      walker,
+		packagePath: path.Join(outPath, "src", genPkg),
+		genServer:   fmt.Sprintf("%s/%s-server", genPkg, genPkg),
 	}
 
 	return sb, nil
@@ -111,7 +139,7 @@ func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
 		return nil
 	}
 
-	outname := path.Join(me.OutputDir, simplate.OutputName())
+	outname := path.Join(me.packagePath, simplate.OutputName())
 	debugf("Writing source for %v to %v\n", simplate.Filename, outname)
 
 	outf, err := os.Create(outname)
@@ -135,6 +163,28 @@ func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
 	return nil
 }
 
+func (me *SiteBuilder) writeGenServer() error {
+	dirname := path.Join(me.OutputGopath, "src", me.genServer)
+	err := os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	fd, err := os.Create(path.Join(dirname, "main.go"))
+	if err != nil {
+		return err
+	}
+
+	defer fd.Close()
+
+	err = genServerTemplate.Execute(fd, me)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (me *SiteBuilder) writeSources() error {
 	simplates, err := me.walker.Simplates()
 	if err != nil {
@@ -148,66 +198,66 @@ func (me *SiteBuilder) writeSources() error {
 		}
 	}
 
+	err = me.writeGenServer()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (me *SiteBuilder) compileSources() error {
+	origGopath := os.Getenv("GOPATH")
+	err := os.Setenv("GOPATH", fmt.Sprintf("%s:%s", me.OutputGopath, origGopath))
+	if err != nil {
+		return err
+	}
+
+	defer os.Setenv("GOPATH", origGopath)
+
+	var out bytes.Buffer
+	installPkgCmd := exec.Command(me.goexe, "install", me.GenPackage)
+	installPkgCmd.Stdout = &out
+
+	err = installPkgCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	installBinCmd := exec.Command(me.goexe, "install", me.genServer)
+	//installBinCmd.Stdout = &out
+
+	err = installBinCmd.Run()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (me *SiteBuilder) formatOneSource(sourceFile string) error {
-	in, err := os.Open(sourceFile)
+	origGopath := os.Getenv("GOPATH")
+	err := os.Setenv("GOPATH", me.OutputGopath)
 	if err != nil {
 		return err
 	}
 
-	defer in.Close()
+	defer os.Setenv("GOPATH", origGopath)
 
-	tmpOut, err := ioutil.TempFile("", "goaspen-gofmt")
-	if err != nil {
-		return err
-	}
-
-	defer os.Remove(tmpOut.Name())
-
-	formatCmd := exec.Command(me.gofmt)
-	formatCmd.Stdin = in
-	formatCmd.Stdout = tmpOut
+	var out bytes.Buffer
+	formatCmd := exec.Command(me.goexe, "fmt", me.GenPackage)
+	formatCmd.Stdout = &out
 
 	err = formatCmd.Run()
 	if err != nil {
-		defer tmpOut.Close()
 		return err
 	}
-
-	pos, err := tmpOut.Seek(int64(0), 0)
-	if err != nil {
-		return err
-	}
-
-	if pos != int64(0) {
-		return errors.New("Failed to seek temporary file to 0!")
-	}
-
-	out, err := os.Create(sourceFile)
-	if err != nil {
-		return err
-	}
-
-	defer out.Close()
-
-	_, err = io.Copy(out, tmpOut)
-	if err != nil {
-		return err
-	}
-
-	tmpOut.Close()
 
 	return nil
 }
 
 func (me *SiteBuilder) formatSources() error {
-	sources, err := filepath.Glob(path.Join(me.OutputDir, "*.go"))
+	sources, err := me.sourcesList()
 	if err != nil {
 		return err
 	}
@@ -220,6 +270,10 @@ func (me *SiteBuilder) formatSources() error {
 	}
 
 	return nil
+}
+
+func (me *SiteBuilder) sourcesList() ([]string, error) {
+	return filepath.Glob(path.Join(me.packagePath, "*.go"))
 }
 
 func (me *SiteBuilder) Build() error {
@@ -235,7 +289,7 @@ func (me *SiteBuilder) Build() error {
 		}
 	}
 
-	if !me.NoCompile {
+	if me.Compile {
 		err = me.compileSources()
 		if err != nil {
 			return err

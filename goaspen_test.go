@@ -536,8 +536,9 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 
 func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
 	_, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   "/dev/null",
-		OutputDir: ".",
+		RootDir:       "/dev/null",
+		OutputGopath:  ".",
+		GenServerBind: ":9182",
 	})
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid root dir!")
@@ -546,8 +547,9 @@ func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
 
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 	_, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   ".",
-		OutputDir: "/dev/null",
+		RootDir:       ".",
+		OutputGopath:  "/dev/null",
+		GenServerBind: ":9182",
 	})
 	if err == nil {
 		t.Errorf("New site builder failed to reject invalid output dir!")
@@ -556,8 +558,9 @@ func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 
 func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   ".",
-		OutputDir: ".",
+		RootDir:       ".",
+		OutputGopath:  ".",
+		GenServerBind: ":9182",
 	})
 
 	if err != nil {
@@ -578,10 +581,11 @@ func TestSiteBuilderExposesRootDir(t *testing.T) {
 	}
 
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   testSiteRoot,
-		OutputDir: goAspenGenDir,
-		Format:    true,
-		MkOutDir:  true,
+		RootDir:       testSiteRoot,
+		OutputGopath:  tmpdir,
+		GenServerBind: ":9182",
+		Format:        true,
+		MkOutDir:      true,
 	})
 	if err != nil {
 		t.Error(err)
@@ -603,18 +607,19 @@ func TestSiteBuilderExposesOutputDir(t *testing.T) {
 	}
 
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   testSiteRoot,
-		OutputDir: goAspenGenDir,
-		Format:    true,
-		MkOutDir:  true,
+		RootDir:       testSiteRoot,
+		OutputGopath:  tmpdir,
+		GenServerBind: ":9182",
+		Format:        true,
+		MkOutDir:      true,
 	})
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if sb.OutputDir != goAspenGenDir {
-		t.Errorf("OutputDir != %s: %s", goAspenGenDir, sb.OutputDir)
+	if sb.OutputGopath != tmpdir {
+		t.Errorf("OutputDir != %s: %s", tmpdir, sb.OutputGopath)
 		return
 	}
 }
@@ -628,10 +633,11 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 	}
 
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   testSiteRoot,
-		OutputDir: goAspenGenDir,
-		MkOutDir:  true,
-		NoCompile: true,
+		RootDir:       testSiteRoot,
+		OutputGopath:  tmpdir,
+		GenServerBind: ":9182",
+		MkOutDir:      true,
+		Compile:       false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -664,11 +670,12 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 	}
 
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   testSiteRoot,
-		OutputDir: goAspenGenDir,
-		Format:    true,
-		MkOutDir:  true,
-		NoCompile: true,
+		RootDir:       testSiteRoot,
+		OutputGopath:  tmpdir,
+		GenServerBind: ":9182",
+		Format:        true,
+		MkOutDir:      true,
+		Compile:       false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -732,7 +739,6 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 	}
 }
 
-/*
 func TestNewSiteBuilderCompilesSources(t *testing.T) {
 	mkTestSite()
 	if noCleanup {
@@ -742,10 +748,12 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 	}
 
 	sb, err := NewSiteBuilder(&SiteBuilderCfg{
-		RootDir:   testSiteRoot,
-		OutputDir: goAspenGenDir,
-		Format:    true,
-		MkOutDir:  true,
+		RootDir:       testSiteRoot,
+		OutputGopath:  tmpdir,
+		GenServerBind: ":9182",
+		Format:        true,
+		Compile:       true,
+		MkOutDir:      true,
 	})
 	if err != nil {
 		t.Error(err)
@@ -758,14 +766,16 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 		return
 	}
 
-	fi, err := os.Stat(path.Join(sb.OutputDir, "goaspen_gen-server"))
+	serverBinary := path.Join(sb.OutputGopath, "bin", "goaspen_gen-server")
+
+	fi, err := os.Stat(serverBinary)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if fi.Mode() != (os.FileMode)(0755) {
-		t.Errorf("Site server binary permissions != %v: %v", 0755, fi.Mode())
+	if fi.Mode() != (os.FileMode)(0750) {
+		t.Errorf("Site server binary %q permissions != %v: %v",
+			serverBinary, (os.FileMode)(0750), fi.Mode())
 	}
 }
-*/

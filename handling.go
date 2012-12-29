@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	handlerFuncRegistrations map[string](*HandlerFuncRegistration)
+	HandlerFuncRegistrations = map[string](*HandlerFuncRegistration){}
 )
 
 type HandlerFuncRegistration struct {
@@ -22,10 +22,10 @@ func NewHandlerFuncRegistration(requestPath string,
 		panic(errors.New(fmt.Sprintf("Invalid request path %q", requestPath)))
 	}
 
-	handlerFuncRegistrations[requestPath] = &HandlerFuncRegistration{
+	HandlerFuncRegistrations[requestPath] = &HandlerFuncRegistration{
 		RequestPath: requestPath,
 		HandlerFunc: handler,
 	}
 
-	return handlerFuncRegistrations[requestPath]
+	return HandlerFuncRegistrations[requestPath]
 }

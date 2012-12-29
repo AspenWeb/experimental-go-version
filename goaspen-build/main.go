@@ -12,10 +12,10 @@ import (
 
 var (
 	exampleUsage = `
-Builds simplates found in ROOT_DIR (-d) into Go sources
-written to OUTPUT_DIR (-o), optionally passing them through
-the 'gofmt' tool (-f).  The output dir must already exist, or
-the '-m' flag may be passed to ensure it exists.
+Builds simplates found in ROOT_DIR (-d) into Go sources written to generated
+package (-p) in the output GOPATH base (-o), optionally running 'go fmt' (-f).
+The output GOPATH base must already exist, or the '-m' flag may be passed to
+ensure it exists.
 
 `
 )
@@ -33,32 +33,34 @@ func main() {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	outDir := goaspen.DefaultOutputDir
+	outPath := goaspen.DefaultOutputGopath
 	format := false
 	mkOutDir := false
 	debug := false
-	noCompile := false
+	compile := false
 	genPkg := goaspen.DefaultGenPackage
+	genServerBind := ":9182"
 
 	flag.StringVar(&rootDir, "d", rootDir, "Root directory")
-	flag.StringVar(&outDir, "o", outDir, "Output directory for generated sources")
+	flag.StringVar(&outPath, "o", outPath, "Output GOPATH base for generated sources")
 	flag.StringVar(&genPkg, "p", genPkg, "Generated source package name")
+	flag.StringVar(&genServerBind, "b", genServerBind, "Generated server binding")
 	flag.BoolVar(&format, "f", format, "Format generated sources")
-	flag.BoolVar(&mkOutDir, "m", mkOutDir, "Make output directory if not exists")
+	flag.BoolVar(&mkOutDir, "m", mkOutDir, "Make output GOPATH base if not exists")
 	flag.BoolVar(&debug, "x", debug, "Print debugging output")
-	flag.BoolVar(&noCompile, "Z", noCompile, "Don't compile generated sources")
+	flag.BoolVar(&compile, "Z", compile, "Compile generated sources")
 	flag.Usage = usage
 	flag.Parse()
 
 	goaspen.SetDebug(debug)
 
 	retcode := goaspen.BuildMain(&goaspen.SiteBuilderCfg{
-		RootDir:    rootDir,
-		OutputDir:  outDir,
-		GenPackage: genPkg,
-		Format:     format,
-		MkOutDir:   mkOutDir,
-		NoCompile:  noCompile,
+		RootDir:      rootDir,
+		OutputGopath: outPath,
+		GenPackage:   genPkg,
+		Format:       format,
+		MkOutDir:     mkOutDir,
+		Compile:      compile,
 	})
 	os.Exit(retcode)
 }

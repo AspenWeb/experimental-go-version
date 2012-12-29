@@ -9,7 +9,7 @@ var (
 	simplateTmplCommonHeader = `
 package goaspen_gen
 // GENERATED FILE - DO NOT EDIT
-// Rebuild with simplate filesystem parsing thingy!
+// Rebuild with goaspen-build!
 
 import (
     "net/http"
