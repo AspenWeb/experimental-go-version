@@ -31,10 +31,13 @@ import (
 var (
     siteRoot = flag.String("d", "{{.RootDir}}", "Site root directory (for serving static files.)")
     serverBind = flag.String("b", "{{.GenServerBind}}", "Server binding")
+    debug = flag.Bool("x", false, "Print debug output")
 )
 
 func main() {
     flag.Parse()
+    goaspen.SetDebug(*debug)
+
     err := goaspen.RunServer("{{.GenPackage}}", *serverBind, *siteRoot)
     if err != nil {
         panic(err)
