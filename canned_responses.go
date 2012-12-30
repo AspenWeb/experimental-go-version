@@ -40,4 +40,25 @@ var (
   </body>
 </html>
 `)
+	http406Response = []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>406 Not Acceptable</title>
+    <style type="text/css">
+      body {
+        color: #fff;
+        background: #a55;
+      }
+      #crying {
+        font-size: 48px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>406 Not Acceptable</h1>
+    <p id="crying">(Ｔ▽Ｔ)</p>
+  </body>
+</html>
+`)
 )

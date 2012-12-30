@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"bitbucket.org/ww/goautoneg"
 )
 
 var (
+	ErrHTTP406 = errors.New("406: No acceptable media type available")
+
 	defaultAcceptHeader = "text/html,application/xhtml+xml," +
 		"application/xml;q=0.9,*/*;q=0.8"
 )
@@ -75,8 +78,23 @@ func (me *HTTPResponseWrapper) Respond500(err error) {
 	me.w.Write(http500Response)
 }
 
+func (me *HTTPResponseWrapper) Respond406(err error) {
+	me.w.Header().Set("Content-Type", "text/html")
+	if isDebug {
+		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
+	}
+
+	me.w.WriteHeader(http.StatusNotAcceptable)
+	me.w.Write(http406Response)
+}
+
 func (me *HTTPResponseWrapper) Respond() {
 	if me.err != nil {
+		if strings.HasPrefix(me.err.Error(), "406:") {
+			me.Respond406(me.err)
+			return
+		}
+
 		me.Respond500(me.err)
 		return
 	}
@@ -111,16 +129,20 @@ func (me *HTTPResponseWrapper) RegisterContentTypeHandler(contentType string,
 }
 
 func (me *HTTPResponseWrapper) NegotiateAndCallHandler() {
-	accept := me.req.Header.Get(http.CanonicalHeaderKey("Accept"))
-
-	if len(accept) < 1 {
-		accept = defaultAcceptHeader
+	accept := me.req.Header.Get(internalAcceptHeader)
+	if len(accept) == 0 {
+		accept = me.req.Header.Get(http.CanonicalHeaderKey("Accept"))
 	}
 
 	debugf("Looking up handler for Accept: %q", accept)
 	debugf("Available content type handlers: %v", me.handledContentTypes)
 
 	negotiated := goautoneg.Negotiate(accept, me.handledContentTypes)
+	if len(negotiated) == 0 {
+		me.err = ErrHTTP406
+		return
+	}
+
 	handlerFunc, ok := me.contentTypeHandlers[negotiated]
 	if ok {
 		debugf("Calling handler %v for negotiated content type %q", handlerFunc, negotiated)

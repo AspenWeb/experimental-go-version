@@ -3,10 +3,15 @@ package goaspen
 import (
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"path"
 	"strings"
 	"sync"
+)
+
+const (
+	internalAcceptHeader = "X-GoAspen-Accept"
 )
 
 var (
@@ -29,6 +34,7 @@ type DirectoryHandler struct {
 
 func (me *DirectoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	debugf("Handling directory response for %q", req.URL.Path)
+	me.updateNegType(req, req.URL.Path)
 
 	for requestUri, handler := range me.PatternHandlers {
 		matched, err := path.Match(requestUri, req.URL.Path)
@@ -62,6 +68,15 @@ func (me *DirectoryHandler) AddGlob(pathGlob string,
 
 func (me *DirectoryHandler) ServeStatic(w http.ResponseWriter, req *http.Request) error {
 	return errors.New("Not implemented, so pretending nothing is here!")
+}
+
+func (me *DirectoryHandler) updateNegType(req *http.Request, filename string) {
+	mediaType := mime.TypeByExtension(path.Ext(filename))
+	if len(mediaType) == 0 {
+		mediaType = "text/html" // FIXME get default from config
+	}
+
+	req.Header.Set(internalAcceptHeader, mediaType)
 }
 
 func NewHandlerFuncRegistration(requestPath string,
