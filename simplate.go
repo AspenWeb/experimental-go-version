@@ -12,24 +12,24 @@ import (
 )
 
 const (
-	SIMPLATE_TYPE_RENDERED   = "rendered"
-	SIMPLATE_TYPE_STATIC     = "static"
-	SIMPLATE_TYPE_NEGOTIATED = "negotiated"
-	SIMPLATE_TYPE_JSON       = "json"
+	SimplateTypeRendered   = "rendered"
+	SimplateTypeStatic     = "static"
+	SimplateTypeNegotiated = "negotiated"
+	SimplateTypeJson       = "json"
 )
 
 var (
-	SIMPLATE_TYPES = []string{
-		SIMPLATE_TYPE_JSON,
-		SIMPLATE_TYPE_NEGOTIATED,
-		SIMPLATE_TYPE_RENDERED,
-		SIMPLATE_TYPE_STATIC,
+	SimplateTypes = []string{
+		SimplateTypeJson,
+		SimplateTypeNegotiated,
+		SimplateTypeRendered,
+		SimplateTypeStatic,
 	}
 	simplateTypeTemplates = map[string]*template.Template{
-		SIMPLATE_TYPE_JSON:       escapedSimplateTemplate(simplateTypeJSONTmpl, "goaspen-gen-json"),
-		SIMPLATE_TYPE_RENDERED:   escapedSimplateTemplate(simplateTypeRenderedTmpl, "goaspen-gen-rendered"),
-		SIMPLATE_TYPE_NEGOTIATED: escapedSimplateTemplate(simplateTypeNegotiatedTmpl, "goaspen-gen-negotiated"),
-		SIMPLATE_TYPE_STATIC:     nil,
+		SimplateTypeJson:       escapedSimplateTemplate(simplateTypeJSONTmpl, "goaspen-gen-json"),
+		SimplateTypeRendered:   escapedSimplateTemplate(simplateTypeRenderedTmpl, "goaspen-gen-rendered"),
+		SimplateTypeNegotiated: escapedSimplateTemplate(simplateTypeNegotiatedTmpl, "goaspen-gen-negotiated"),
+		SimplateTypeStatic:     nil,
 	}
 	defaultRenderer = "#!go/text/template"
 )
@@ -74,7 +74,7 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 	s := &Simplate{
 		SiteRoot:    siteRoot,
 		Filename:    filename,
-		Type:        SIMPLATE_TYPE_STATIC,
+		Type:        SimplateTypeStatic,
 		ContentType: mime.TypeByExtension(path.Ext(filename)),
 	}
 
@@ -90,9 +90,9 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 		}
 
 		if s.ContentType == "application/json" {
-			s.Type = SIMPLATE_TYPE_JSON
+			s.Type = SimplateTypeJson
 		} else {
-			s.Type = SIMPLATE_TYPE_RENDERED
+			s.Type = SimplateTypeRendered
 			templatePage, err := NewSimplatePage(s, rawPages[2], true)
 			if err != nil {
 				return nil, err
@@ -105,7 +105,7 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 	}
 
 	if nbreaks > 2 {
-		s.Type = SIMPLATE_TYPE_NEGOTIATED
+		s.Type = SimplateTypeNegotiated
 		s.InitPage, err = NewSimplatePage(s, rawPages[0], false)
 		if err != nil {
 			return nil, err
@@ -162,7 +162,7 @@ func (me *Simplate) escapedFilename() string {
 }
 
 func (me *Simplate) OutputName() string {
-	if me.Type == SIMPLATE_TYPE_STATIC {
+	if me.Type == SimplateTypeStatic {
 		return me.Filename
 	}
 
@@ -195,11 +195,11 @@ func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec
 	}
 
 	switch simplate.Type {
-	case SIMPLATE_TYPE_STATIC:
+	case SimplateTypeStatic:
 		return &SimplatePageSpec{}, nil
-	case SIMPLATE_TYPE_JSON:
+	case SimplateTypeJson:
 		return sps, nil
-	case SIMPLATE_TYPE_RENDERED:
+	case SimplateTypeRendered:
 		renderer := specline
 		if len(renderer) < 1 {
 			renderer = defaultRenderer
@@ -207,7 +207,7 @@ func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec
 
 		sps.Renderer = renderer
 		return sps, nil
-	case SIMPLATE_TYPE_NEGOTIATED:
+	case SimplateTypeNegotiated:
 		parts := strings.Fields(specline)
 		nParts := len(parts)
 

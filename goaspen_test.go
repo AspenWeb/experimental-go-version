@@ -275,8 +275,8 @@ func TestDetectsRenderedSimplate(t *testing.T) {
 		return
 	}
 
-	if s.Type != SIMPLATE_TYPE_RENDERED {
-		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_RENDERED)
+	if s.Type != SimplateTypeRendered {
+		t.Errorf("Simplate detected as %s instead of %s", s.Type, SimplateTypeRendered)
 	}
 }
 
@@ -287,8 +287,8 @@ func TestDetectsStaticSimplate(t *testing.T) {
 		return
 	}
 
-	if s.Type != SIMPLATE_TYPE_STATIC {
-		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_STATIC)
+	if s.Type != SimplateTypeStatic {
+		t.Errorf("Simplate detected as %s instead of %s", s.Type, SimplateTypeStatic)
 	}
 }
 
@@ -299,8 +299,8 @@ func TestDetectsJSONSimplates(t *testing.T) {
 		return
 	}
 
-	if s.Type != SIMPLATE_TYPE_JSON {
-		t.Errorf("Simplate detected as %s instead of %s", s.Type, SIMPLATE_TYPE_JSON)
+	if s.Type != SimplateTypeJson {
+		t.Errorf("Simplate detected as %s instead of %s", s.Type, SimplateTypeJson)
 	}
 }
 
@@ -311,9 +311,9 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 		return
 	}
 
-	if s.Type != SIMPLATE_TYPE_NEGOTIATED {
+	if s.Type != SimplateTypeNegotiated {
 		t.Errorf("Simplate detected as %s instead of %s",
-			s.Type, SIMPLATE_TYPE_NEGOTIATED)
+			s.Type, SimplateTypeNegotiated)
 	}
 }
 
@@ -522,7 +522,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 	}
 
 	for simplate := range simplates {
-		if sort.SearchStrings(SIMPLATE_TYPES, simplate.Type) < 0 {
+		if sort.SearchStrings(SimplateTypes, simplate.Type) < 0 {
 			t.Errorf("Simplate yielded with invalid type: %v", simplate.Type)
 			return
 		}

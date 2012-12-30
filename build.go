@@ -142,7 +142,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 }
 
 func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
-	if simplate.Type == SIMPLATE_TYPE_STATIC {
+	if simplate.Type == SimplateTypeStatic {
 		return nil
 	}
 
