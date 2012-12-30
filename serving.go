@@ -17,6 +17,5 @@ func RunServer(packageName, serverBind, siteRoot string) error {
 	}
 
 	fmt.Printf("%s-server serving on %q\n", packageName, serverBind)
-	http.ListenAndServe(serverBind, nil)
-	return nil
+	return http.ListenAndServe(serverBind, nil)
 }

@@ -23,6 +23,7 @@ package main
 
 import (
     "flag"
+    "log"
 
     "github.com/meatballhat/goaspen"
     _ "{{.GenPackage}}"
@@ -40,7 +41,7 @@ func main() {
 
     err := goaspen.RunServer("{{.GenPackage}}", *serverBind, *siteRoot)
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
 }
 `))
