@@ -48,9 +48,16 @@ func NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPRespo
 }
 
 func (me *HTTPResponseWrapper) SetContentType(contentType string) {
-	if len(contentType) > 0 {
-		me.contentType = contentType
+	if len(contentType) == 0 {
+		debugf("Ignoring call to `SetContentType` because argument is empty!")
+		return
 	}
+
+	if strings.HasPrefix(contentType, "text/") && !strings.Contains(contentType, "charset=") {
+		contentType = contentType + "; charset=utf-8" // XXX get default charset from config?
+	}
+
+	me.contentType = contentType
 }
 
 func (me *HTTPResponseWrapper) SetBodyBytes(body []byte) {
@@ -70,7 +77,7 @@ func (me *HTTPResponseWrapper) SetError(err error) {
 }
 
 func (me *HTTPResponseWrapper) Respond500(err error) {
-	me.w.Header().Set("Content-Type", "text/html")
+	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}
@@ -79,7 +86,7 @@ func (me *HTTPResponseWrapper) Respond500(err error) {
 }
 
 func (me *HTTPResponseWrapper) Respond406(err error) {
-	me.w.Header().Set("Content-Type", "text/html")
+	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}

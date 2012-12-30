@@ -52,7 +52,7 @@ func (me *DirectoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 
 	err := me.ServeStatic(w, req)
 	if err != nil {
-		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(http404Response)
 	}
