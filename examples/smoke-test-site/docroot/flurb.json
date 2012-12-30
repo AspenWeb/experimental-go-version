@@ -1,0 +1,8 @@
+// vim:filetype=go
+type Flurb struct {
+    Flum string
+    Zoots int
+}
+
+ctx["flurb"] = &Flurb{Flum: "nerf", Zoots: 90}
+response.SetBody(ctx)

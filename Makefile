@@ -16,4 +16,7 @@ deps:
 clean:
 	go clean -x -i $(TARGETS)
 
-.PHONY: test build clean fmt
+smoke: test
+	$(MAKE) -C examples/smoke-test-site
+
+.PHONY: test build deps clean smoke

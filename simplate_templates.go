@@ -78,6 +78,7 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
     if err != nil {
         response.SetError(err)
     }
+
     response.RespondJSON()
 }
 `

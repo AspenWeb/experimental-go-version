@@ -1,0 +1,40 @@
+// vim:filetype=go
+import (
+    "math/rand"
+    "time"
+)
+
+type Octo struct {
+	Eyes    int
+	Suckers bool
+}
+
+func init() {
+    rand.Seed(time.Now().UTC().UnixNano())
+}
+
+
+ctx["o"] = &Octo{Eyes: rand.Int(), Suckers: true}
+ text/plain
+The Mighty Octo has {{.o.Eyes}} eyes!
+And Suckers? {{.o.Suckers}}
+ application/xml
+<octo suckers="{{.o.Suckers}}">
+  <eyes count="{{.o.Eyes}}" />
+</octo>
+ application/json
+{
+    "suckers": "{{.o.Suckers}}",
+    "eyes": "{{.o.Eyes}}"
+}
+ text/html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>The Mighty Octo!</title>
+  </head>
+  <body>
+    <h1>The Mighty Octo has {{.o.Eyes}} eyes!</h1>
+    <p>And Suckers?  {{.o.Suckers}}</p>
+  </body>
+</html>

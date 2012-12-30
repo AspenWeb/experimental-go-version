@@ -22,20 +22,23 @@ package main
 // Rebuild with goaspen-build!
 
 import (
-    "fmt"
-    "net/http"
+    "flag"
 
     "github.com/meatballhat/goaspen"
     _ "{{.GenPackage}}"
 )
 
-func main() {
-    for _, reg := range goaspen.HandlerFuncRegistrations {
-        http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
-    }
+var (
+    siteRoot = flag.String("d", "{{.RootDir}}", "Site root directory (for serving static files.)")
+    serverBind = flag.String("b", "{{.GenServerBind}}", "Server binding")
+)
 
-    fmt.Println("{{.GenPackage}}-server serving on {{.GenServerBind}}")
-    http.ListenAndServe("{{.GenServerBind}}", nil)
+func main() {
+    flag.Parse()
+    err := goaspen.RunServer("{{.GenPackage}}", *serverBind, *siteRoot)
+    if err != nil {
+        panic(err)
+    }
 }
 `))
 )
@@ -97,7 +100,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 	}
 
 	if cfg.MkOutDir {
-		err = os.MkdirAll(outPath, os.ModeDir|os.ModePerm)
+		err = os.MkdirAll(outPath, os.ModeDir|(os.FileMode)(0755))
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +131,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		goexe:       goexe,
 		walker:      walker,
 		packagePath: path.Join(outPath, "src", genPkg),
-		genServer:   fmt.Sprintf("%s/%s-server", genPkg, genPkg),
+		genServer:   fmt.Sprintf("%s/%s-http-server", genPkg, genPkg),
 	}
 
 	return sb, nil
@@ -141,6 +144,15 @@ func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
 
 	outname := path.Join(me.packagePath, simplate.OutputName())
 	debugf("Writing source for %v to %v\n", simplate.Filename, outname)
+
+	outnameParent := path.Dir(outname)
+	_, err := os.Stat(outnameParent)
+	if err != nil {
+		err = os.MkdirAll(outnameParent, os.ModeDir|(os.FileMode)(0755))
+		if err != nil {
+			return err
+		}
+	}
 
 	outf, err := os.Create(outname)
 	if err != nil {
@@ -165,7 +177,7 @@ func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
 
 func (me *SiteBuilder) writeGenServer() error {
 	dirname := path.Join(me.OutputGopath, "src", me.genServer)
-	err := os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
+	err := os.MkdirAll(dirname, os.ModeDir|(os.FileMode)(0755))
 	if err != nil {
 		return err
 	}

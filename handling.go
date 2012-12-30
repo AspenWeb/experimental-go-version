@@ -29,3 +29,11 @@ func NewHandlerFuncRegistration(requestPath string,
 
 	return HandlerFuncRegistrations[requestPath]
 }
+
+func RegisterAllHandlerFuncs() error {
+	for _, reg := range HandlerFuncRegistrations {
+		http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
+	}
+
+	return nil
+}

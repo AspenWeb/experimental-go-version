@@ -766,7 +766,7 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 		return
 	}
 
-	serverBinary := path.Join(sb.OutputGopath, "bin", "goaspen_gen-server")
+	serverBinary := path.Join(sb.OutputGopath, "bin", "goaspen_gen-http-server")
 
 	fi, err := os.Stat(serverBinary)
 	if err != nil {
