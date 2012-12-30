@@ -6,7 +6,12 @@ import (
 )
 
 func RunServer(packageName, serverBind, siteRoot string) error {
-	err := RegisterAllHandlerFuncs()
+	err := ExpandAllHandlerFuncRegistrations()
+	if err != nil {
+		return err
+	}
+
+	err = RegisterAllHandlerFuncs()
 	if err != nil {
 		return err
 	}

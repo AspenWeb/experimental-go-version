@@ -90,36 +90,59 @@ func NewHandlerFuncRegistration(requestPath string,
 	return HandlerFuncRegistrations[requestPath]
 }
 
-func RegisterAllHandlerFuncs() error {
-	debugf("Registering all handler funcs!")
-	regLock.RLock()
-	defer regLock.RUnlock()
+func ExpandAllHandlerFuncRegistrations() error {
+	debugf("Expanding all handler func registrations!")
 
 	for _, reg := range HandlerFuncRegistrations {
-		if path.Ext(reg.RequestPath) == ".*" {
-			debugf("Found glob registration %q, adding to directory handler",
-				reg.RequestPath)
-
-			newRegistrations, err := AddGlobToDirectoryHandler(path.Dir(reg.RequestPath),
-				reg.RequestPath, reg.HandlerFunc)
-			if err != nil {
-				return err
-			}
-
-			for _, newReg := range newRegistrations {
-				http.HandleFunc(newReg.RequestPath, newReg.HandlerFunc)
-			}
-			continue
+		err := expandHandlerFuncRegistration(reg)
+		if err != nil {
+			return err
 		}
-
-		http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
 	}
 
 	return nil
 }
 
+func expandHandlerFuncRegistration(reg *HandlerFuncRegistration) error {
+	if path.Ext(reg.RequestPath) == ".*" {
+		debugf("Found glob registration %q, adding to directory handler",
+			reg.RequestPath)
+
+		err := AddGlobToDirectoryHandler(path.Dir(reg.RequestPath),
+			reg.RequestPath, reg.HandlerFunc)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return nil
+}
+
+func RegisterAllHandlerFuncs() error {
+	debugf("Registering all handler funcs!")
+
+	for _, reg := range HandlerFuncRegistrations {
+		err := registerHandlerFunc(reg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func registerHandlerFunc(reg *HandlerFuncRegistration) error {
+	regLock.RLock()
+	defer regLock.RUnlock()
+
+	http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
+	return nil
+}
+
 func AddGlobToDirectoryHandler(dir, requestPath string,
-	handler func(http.ResponseWriter, *http.Request)) ([]*HandlerFuncRegistration, error) {
+	handler func(http.ResponseWriter, *http.Request)) error {
 
 	var reg *HandlerFuncRegistration
 
@@ -140,7 +163,7 @@ func AddGlobToDirectoryHandler(dir, requestPath string,
 	dirHandlerReg = HandlerFuncRegistrations[dir]
 	if dirHandlerReg.Receiver == nil {
 		msg := fmt.Sprintf("Cannot add glob to directory handler for %q", dir)
-		return nil, errors.New(msg)
+		return errors.New(msg)
 	}
 
 	globReg := &HandlerFuncRegistration{
@@ -149,8 +172,8 @@ func AddGlobToDirectoryHandler(dir, requestPath string,
 	}
 	err := dirHandlerReg.Receiver.AddGlob(requestPath, globReg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return []*HandlerFuncRegistration{dirHandlerReg, globReg}, nil
+	return nil
 }

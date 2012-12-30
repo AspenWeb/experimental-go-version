@@ -117,9 +117,13 @@ func (me *HTTPResponseWrapper) NegotiateAndCallHandler() {
 		accept = defaultAcceptHeader
 	}
 
+	debugf("Looking up handler for Accept: %q", accept)
+	debugf("Available content type handlers: %v", me.handledContentTypes)
+
 	negotiated := goautoneg.Negotiate(accept, me.handledContentTypes)
 	handlerFunc, ok := me.contentTypeHandlers[negotiated]
 	if ok {
+		debugf("Calling handler %v for negotiated content type %q", handlerFunc, negotiated)
 		handlerFunc(me)
 	}
 }
