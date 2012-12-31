@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"syscall"
+	"time"
 
 	"github.com/jteeuwen/go-pkg-optarg"
 	"github.com/meatballhat/goaspen"
@@ -27,13 +29,20 @@ func init() {
 	*usageInfoAddr = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
+func changeMonitor(q chan bool) {
+	// TODO implement real monitoring with github.com/kless/go-exp/inotify
+	log.Println("Simulating change in 1 second!")
+	time.Sleep(1000 * time.Millisecond)
+	q <- true
+}
+
 func main() {
 	wwwRoot, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	//changesReload := false
+	changesReload := false
 	//charsetDynamic := goaspen.DefaultCharsetDynamic
 	//charsetStatic := ""
 	compile := true
@@ -60,6 +69,7 @@ func main() {
 	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
 	//"to configuration files in Go syntax that accept config JSON on "+
 	//"stdin and write config JSON to stdout.", configFiles)
+
 	// TODO
 	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
 	//"most of goaspen's internal logging, 2 will suppress all it",
@@ -72,6 +82,7 @@ func main() {
 	optarg.Add("m", "make_outdir",
 		"Make output GOPATH base if not exists", mkOutDir)
 	optarg.Add("C", "compile", "Compile generated sources", compile)
+	// TODO
 	//optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
 	//"changes to configuration files and document root files will cause "+
 	//"simplates to rebuild, then re-exec the generated server binary.",
@@ -123,24 +134,43 @@ func main() {
 			Compile:       compile,
 		})
 
-		if !runServer { //&& !changesReload {
+		if !runServer {
 			break
 		}
 
-		httpExe := path.Join(outPath, "bin", genPkg+"-http-server")
-		srvCmd := exec.Command(httpExe,
-			"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%s", debug))
-		srvCmd.Stdout = os.Stdout
-		srvCmd.Stderr = os.Stderr
-		srvCmd.Start()
-		// TODO listen to an os.Signal channel or some such instead of waiting
-		err = srvCmd.Wait()
-		if err, ok := err.(*exec.ExitError); ok {
-			if err.Success() {
-				continue
+		retChan := make(chan int)
+		quitChan := make(chan bool)
+
+		go func(ret chan int, q chan bool) {
+			httpExe := path.Join(outPath, "bin", genPkg+"-http-server")
+			srvCmd := exec.Command(httpExe,
+				"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%v", debug))
+			srvCmd.Stdout = os.Stdout
+			srvCmd.Stderr = os.Stderr
+			srvCmd.Start()
+
+			if <-q {
+				srvCmd.Process.Signal(syscall.SIGQUIT)
+			}
+			// TODO listen to an os.Signal channel or some such instead of waiting
+			err = srvCmd.Wait()
+			if _, ok := err.(*exec.ExitError); ok {
+				ret <- 9
+				return
 			}
 
-			retcode = 9
+			ret <- 0
+			return
+		}(retChan, quitChan)
+
+		if changesReload {
+			go changeMonitor(quitChan)
+		} else {
+			quitChan <- false
+		}
+
+		retcode = <-retChan
+		if retcode != 0 {
 			break
 		}
 	}

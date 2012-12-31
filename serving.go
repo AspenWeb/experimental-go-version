@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jteeuwen/go-pkg-optarg"
 )
@@ -35,10 +38,20 @@ func RunServerMain(defaultRootDir, genServerBind, packageName string) {
 
 	SetDebug(debug)
 
+	go serverQuitListener()
+
 	err := RunServer(packageName, serverBind, wwwRoot)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func serverQuitListener() {
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGQUIT)
+	<-ch
+	log.Println("Received SIGQUIT; exiting")
+	os.Exit(0)
 }
 
 func RunServer(packageName, serverBind, siteRoot string) error {
