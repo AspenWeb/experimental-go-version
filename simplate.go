@@ -35,13 +35,13 @@ var (
 )
 
 type Simplate struct {
-	SiteRoot      string
-	Filename      string
-	Type          string
-	ContentType   string
-	InitPage      *SimplatePage
-	LogicPage     *SimplatePage
-	TemplatePages []*SimplatePage
+	SiteRoot      string          `json:"-"`
+	Filename      string          `json:"-"`
+	Type          string          `json:"type"`
+	ContentType   string          `json:"content_type"`
+	InitPage      *SimplatePage   `json:"-"`
+	LogicPage     *SimplatePage   `json:"-"`
+	TemplatePages []*SimplatePage `json:"-"`
 }
 
 type SimplatePage struct {

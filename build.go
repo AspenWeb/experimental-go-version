@@ -2,6 +2,7 @@ package goaspen
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -44,6 +45,7 @@ type SiteBuilder struct {
 	walker      *TreeWalker
 	packagePath string
 	genServer   string
+	index       map[string]*Simplate
 }
 
 type SiteBuilderCfg struct {
@@ -121,6 +123,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		walker:      walker,
 		packagePath: path.Join(outPath, "src", genPkg),
 		genServer:   fmt.Sprintf("%s/%s-http-server", genPkg, genPkg),
+		index:       map[string]*Simplate{},
 	}
 
 	return sb, nil
@@ -197,9 +200,46 @@ func (me *SiteBuilder) writeSources() error {
 		if err != nil {
 			return err
 		}
+
+		me.indexSimplate(simplate)
+	}
+
+	err = me.dumpSiteIndex()
+	if err != nil {
+		return err
 	}
 
 	err = me.writeGenServer()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (me *SiteBuilder) indexSimplate(simplate *Simplate) {
+	me.index[fmt.Sprintf("/%v", simplate.Filename)] = simplate
+}
+
+func (me *SiteBuilder) dumpSiteIndex() error {
+	idxPath := path.Join(me.RootDir, ".goaspen-index.json")
+
+	out, err := os.Create(idxPath)
+	if err != nil {
+		return err
+	}
+
+	encoded, err := json.MarshalIndent(me.index, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = out.Write(encoded)
+	if err != nil {
+		return err
+	}
+
+	err = out.Close()
 	if err != nil {
 		return err
 	}
