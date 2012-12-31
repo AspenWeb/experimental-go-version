@@ -32,9 +32,43 @@ And Suckers? {{.o.Suckers}}
 <html>
   <head>
     <title>The Mighty Octo!</title>
+    <link rel="stylesheet" type="text/css" href="/octo.css" />
+    <script type="text/javascript" src="/octo.js"></script>
   </head>
   <body>
-    <h1>The Mighty Octo has {{.o.Eyes}} eyes!</h1>
+    <h1 id="octo" onclick="invokeOcto()">The Mighty Octo has {{.o.Eyes}} eyes!</h1>
+    <p class="eyes">ooooooooooooooooooooooooooooooooooo</p>
     <p>And Suckers?  {{.o.Suckers}}</p>
   </body>
 </html>
+ text/css
+#octo {
+    font-size: 59px;
+}
+
+.eyes {
+    width: {{.o.Eyes}}px;
+}
+ application/javascript
+function Octo() {
+    this.eyes = {{.o.Eyes}};
+    this.suckers = {{.o.Suckers}};
+}
+
+function invokeOcto() {
+    var o = new Octo();
+    alert("The Mighty Octo has " + o.eyes + " eyes!");
+    alert("And Suckers? " + o.suckers);
+}
+ text/x-chdr
+#define EYES {{.o.Eyes}}
+#define SUCKERS "{{.o.Suckers}}"
+ text/x-csrc
+#include <stdio.h>
+#include "octo.h"
+
+int main() {
+    printf("The Mighty Octo has %d eyes!\n", EYES);
+    printf("And Suckers? %s\n", SUCKERS);
+    return 0;
+}
