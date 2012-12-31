@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 
 	"github.com/jteeuwen/go-pkg-optarg"
@@ -32,7 +33,7 @@ func main() {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	changesReload := false
+	//changesReload := false
 	//charsetDynamic := goaspen.DefaultCharsetDynamic
 	//charsetStatic := ""
 	compile := true
@@ -50,9 +51,12 @@ func main() {
 
 	optarg.Add("h", "help", "Show this help message and exit", false)
 
-	optarg.Header("Basic Options")
+	optarg.Header("Serving Options")
 	goaspen.AddCommonServingOptions(genServerBind, wwwRoot, debug)
+	optarg.Add("s", "run_server",
+		"Start server once compiled (implies `-C`)", runServer)
 	// TODO
+	//optarg.Header("General Configuration Options")
 	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
 	//"to configuration files in Go syntax that accept config JSON on "+
 	//"stdin and write config JSON to stdout.", configFiles)
@@ -60,22 +64,21 @@ func main() {
 	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
 	//"most of goaspen's internal logging, 2 will suppress all it",
 	//loggingThreshold)
+	optarg.Header("Source Generation & Compiling Options")
 	optarg.Add("P", "package_name", "Generated source package name", genPkg)
 	optarg.Add("o", "output_path",
 		"Output GOPATH base for generated sources", outPath)
 	optarg.Add("F", "format", "Format generated sources", format)
 	optarg.Add("m", "make_outdir",
 		"Make output GOPATH base if not exists", mkOutDir)
-	// TODO
-	//optarg.Add("C", "compile", "Compile generated sources", compile)
-	//optarg.Add("s", "run_server", "Start server once compiled", runServer)
-
-	// TODO
-	//optarg.Header("Extended Options")
+	optarg.Add("C", "compile", "Compile generated sources", compile)
 	//optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
 	//"changes to configuration files and document root files will cause "+
 	//"simplates to rebuild, then re-exec the generated server binary.",
 	//changesReload)
+
+	// TODO
+	//optarg.Header("Extended Options")
 	//optarg.Add("", "charset_dynamic", "Set as the charset for rendered "+
 	//"and negotiated resources of Content-Type text/*", charsetDynamic)
 	//optarg.Add("", "charset_static", "Set as the charset for static "+
@@ -98,6 +101,10 @@ func main() {
 			mkOutDir = opt.Bool()
 		case "debug":
 			debug = opt.Bool()
+		case "run_server":
+			value := opt.Bool()
+			runServer = value
+			compile = value
 		}
 	}
 
@@ -116,9 +123,19 @@ func main() {
 			Compile:       compile,
 		})
 
-		if !runServer && !changesReload {
+		if !runServer { //&& !changesReload {
 			break
 		}
+
+		httpExe := path.Join(outPath, "bin", genPkg+"-http-server")
+		srvCmd := exec.Command(httpExe,
+			"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%s", debug))
+		srvCmd.Stdout = os.Stdout
+		srvCmd.Stderr = os.Stderr
+		srvCmd.Start()
+		// TODO listen to an os.Signal channel or some such instead of waiting
+		srvCmd.Wait()
 	}
+
 	os.Exit(retcode)
 }
