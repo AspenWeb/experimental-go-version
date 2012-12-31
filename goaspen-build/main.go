@@ -134,7 +134,15 @@ func main() {
 		srvCmd.Stderr = os.Stderr
 		srvCmd.Start()
 		// TODO listen to an os.Signal channel or some such instead of waiting
-		srvCmd.Wait()
+		err = srvCmd.Wait()
+		if err, ok := err.(*exec.ExitError); ok {
+			if err.Success() {
+				continue
+			}
+
+			retcode = 9
+			break
+		}
 	}
 
 	os.Exit(retcode)
