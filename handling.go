@@ -52,6 +52,13 @@ func (me *DirectoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 
 	err := me.ServeStatic(w, req)
 	if err != nil {
+		if strings.HasSuffix(req.URL.Path, "/favicon.ico") {
+			w.Header().Set("Content-Type", "image/x-icon")
+			w.WriteHeader(http.StatusOK)
+			w.Write(faviconIco)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(http404Response)
