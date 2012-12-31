@@ -1,67 +1,124 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path"
 
+	"github.com/jteeuwen/go-pkg-optarg"
 	"github.com/meatballhat/goaspen"
 )
 
 var (
-	exampleUsage = `
-Builds simplates found in ROOT_DIR (-d) into Go sources written to generated
-package (-p) in the output GOPATH base (-o), optionally running 'go fmt' (-F).
-The output GOPATH base must already exist, or the '-m' flag may be passed to
-ensure it exists.
+	usageInfoTmpl = `Usage: %s [options]
 
+By default, goaspen-build will build simplates found in the "www root" (-w)
+into Go sources written to generated package (-p) in the output GOPATH base
+(-o), optionally running 'go fmt' (-F).  The output GOPATH base must already
+exist, or the '-m' flag may be passed to ensure it exists.
 `
+	usageInfo = ""
 )
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", path.Base(os.Args[0]))
-	fmt.Fprintf(os.Stderr, exampleUsage)
-	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\n")
+func init() {
+	usageInfoAddr := &usageInfo
+	*usageInfoAddr = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
 func main() {
-	rootDir, err := os.Getwd()
+	wwwRoot, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	outPath := goaspen.DefaultOutputGopath
-	format := true
-	mkOutDir := false
-	debug := false
+	changesReload := false
+	//charsetDynamic := goaspen.DefaultCharsetDynamic
+	//charsetStatic := ""
 	compile := true
+	//configFiles := []string{}
+	debug := false
+	format := true
 	genPkg := goaspen.DefaultGenPackage
 	genServerBind := ":9182"
+	//loggingThreshold := 0
+	mkOutDir := false
+	outPath := goaspen.DefaultOutputGopath
+	runServer := false
 
-	flag.StringVar(&rootDir, "d", rootDir, "Root directory")
-	flag.StringVar(&outPath, "o", outPath, "Output GOPATH base for generated sources")
-	flag.StringVar(&genPkg, "p", genPkg, "Generated source package name")
-	flag.StringVar(&genServerBind, "b", genServerBind, "Generated server binding")
-	flag.BoolVar(&format, "F", format, "Format generated sources")
-	flag.BoolVar(&mkOutDir, "m", mkOutDir, "Make output GOPATH base if not exists")
-	flag.BoolVar(&debug, "x", debug, "Print debugging output")
-	flag.BoolVar(&compile, "C", compile, "Compile generated sources")
-	flag.Usage = usage
-	flag.Parse()
+	optarg.UsageInfo = usageInfo
+
+	optarg.Add("h", "help", "Show this help message and exit", false)
+
+	optarg.Header("Basic Options")
+	goaspen.AddCommonServingOptions(genServerBind, wwwRoot, debug)
+	// TODO
+	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
+	//"to configuration files in Go syntax that accept config JSON on "+
+	//"stdin and write config JSON to stdout.", configFiles)
+	// TODO
+	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
+	//"most of goaspen's internal logging, 2 will suppress all it",
+	//loggingThreshold)
+	optarg.Add("P", "package_name", "Generated source package name", genPkg)
+	optarg.Add("o", "output_path",
+		"Output GOPATH base for generated sources", outPath)
+	optarg.Add("F", "format", "Format generated sources", format)
+	optarg.Add("m", "make_outdir",
+		"Make output GOPATH base if not exists", mkOutDir)
+	// TODO
+	//optarg.Add("C", "compile", "Compile generated sources", compile)
+	//optarg.Add("s", "run_server", "Start server once compiled", runServer)
+
+	// TODO
+	//optarg.Header("Extended Options")
+	//optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
+	//"changes to configuration files and document root files will cause "+
+	//"simplates to rebuild, then re-exec the generated server binary.",
+	//changesReload)
+	//optarg.Add("", "charset_dynamic", "Set as the charset for rendered "+
+	//"and negotiated resources of Content-Type text/*", charsetDynamic)
+	//optarg.Add("", "charset_static", "Set as the charset for static "+
+	//"resources of Content-Type text/*", charsetStatic)
+
+	for opt := range optarg.Parse() {
+		switch opt.Name {
+		case "help":
+			optarg.Usage()
+			os.Exit(2)
+		case "package_name":
+			genPkg = opt.String()
+		case "www_root":
+			wwwRoot = opt.String()
+		case "output_path":
+			outPath = opt.String()
+		case "format":
+			format = opt.Bool()
+		case "make_outdir":
+			mkOutDir = opt.Bool()
+		case "debug":
+			debug = opt.Bool()
+		}
+	}
 
 	goaspen.SetDebug(debug)
 
-	retcode := goaspen.BuildMain(&goaspen.SiteBuilderCfg{
-		RootDir:       rootDir,
-		OutputGopath:  outPath,
-		GenPackage:    genPkg,
-		GenServerBind: genServerBind,
-		Format:        format,
-		MkOutDir:      mkOutDir,
-		Compile:       compile,
-	})
+	retcode := 0
+
+	for {
+		retcode = goaspen.BuildMain(&goaspen.SiteBuilderCfg{
+			RootDir:       wwwRoot,
+			OutputGopath:  outPath,
+			GenPackage:    genPkg,
+			GenServerBind: genServerBind,
+			Format:        format,
+			MkOutDir:      mkOutDir,
+			Compile:       compile,
+		})
+
+		if !runServer && !changesReload {
+			break
+		}
+	}
 	os.Exit(retcode)
 }

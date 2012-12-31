@@ -1,5 +1,8 @@
 smoke:
-	GOPATH=./:$(GOPATH) goaspen-build -d docroot -p goaspen_smoke_test -x
-	bin/goaspen_smoke_test-http-server -d docroot -x
+	GOPATH=./:$(GOPATH) goaspen-build -w docroot -P goaspen_smoke_test -x
+	bin/goaspen_smoke_test-http-server -w docroot -x
 
-.PHONY: smoke
+clean:
+	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
+
+.PHONY: smoke clean

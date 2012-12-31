@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrHTTP406 = errors.New("406: No acceptable media type available")
+	//DefaultCharsetDynamic = "utf-8"
 
 	defaultAcceptHeader = "text/html,application/xhtml+xml," +
 		"application/xml;q=0.9,*/*;q=0.8"

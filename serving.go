@@ -2,8 +2,44 @@ package goaspen
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/jteeuwen/go-pkg-optarg"
 )
+
+func AddCommonServingOptions(serverBind, wwwRoot string, debug bool) {
+	optarg.Add("w", "www_root",
+		"Filesystem path of the document publishing root", wwwRoot)
+	optarg.Add("a", "network_address", "The IPv4 or IPv6 address to which "+
+		"the generated server will bind by default", serverBind)
+	optarg.Add("x", "debug", "Print debugging output", debug)
+}
+
+func RunServerMain(defaultRootDir, genServerBind, packageName string) {
+	wwwRoot := defaultRootDir
+	serverBind := genServerBind
+	debug := false
+
+	AddCommonServingOptions(serverBind, wwwRoot, debug)
+	for opt := range optarg.Parse() {
+		switch opt.Name {
+		case "network_address":
+			serverBind = opt.String()
+		case "www_root":
+			wwwRoot = opt.String()
+		case "debug":
+			debug = opt.Bool()
+		}
+	}
+
+	SetDebug(debug)
+
+	err := RunServer(packageName, serverBind, wwwRoot)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func RunServer(packageName, serverBind, siteRoot string) error {
 	err := ExpandAllHandlerFuncRegistrations()
