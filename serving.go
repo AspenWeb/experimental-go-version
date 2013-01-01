@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/jteeuwen/go-pkg-optarg"
@@ -40,11 +41,16 @@ func RunServerMain(wwwRoot, serverBind, packageName string) {
 		}
 	}
 
+	wwwRoot, err := filepath.Abs(wwwRoot)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	SetDebug(debug)
 
 	server := newServerWrapper(packageName, serverBind, wwwRoot)
 
-	err := server.Run()
+	err = server.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,7 +75,7 @@ func (me *serverWrapper) serverQuitListener() {
 func (me *serverWrapper) Run() error {
 	go me.serverQuitListener()
 
-	err := expandAllHandlerFuncRegistrations()
+	err := expandAllHandlerFuncRegistrations(me.WwwRoot)
 	if err != nil {
 		return err
 	}

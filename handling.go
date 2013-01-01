@@ -1,10 +1,11 @@
 package goaspen
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -27,7 +28,7 @@ type handlerFuncRegistration struct {
 }
 
 type directoryHandler struct {
-	SiteRoot        string
+	WwwRoot         string
 	DirectoryPath   string
 	PatternHandlers map[string]*handlerFuncRegistration
 }
@@ -74,7 +75,35 @@ func (me *directoryHandler) AddGlob(pathGlob string,
 }
 
 func (me *directoryHandler) ServeStatic(w http.ResponseWriter, req *http.Request) error {
-	return errors.New("Not implemented, so pretending nothing is here!")
+	fullPath := path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+	debugf("Calculated full path %q from root %q and request path %q",
+		fullPath, me.WwwRoot, req.URL.Path)
+
+	fi, err := os.Stat(fullPath)
+	if err != nil {
+		debugf("Could not stat %q", fullPath)
+		return err
+	}
+
+	ctype := mime.TypeByExtension(path.Ext(fullPath))
+	if strings.HasPrefix(ctype, "text/") && !strings.Contains(ctype, "charset=") {
+		ctype = fmt.Sprintf("%v; charset=utf-8", ctype)
+	}
+
+	outf, err := os.Open(fullPath)
+	if err != nil {
+		debugf("Could not open %q", fullPath)
+		return err
+	}
+
+	defer outf.Close()
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%v", fi.Size()))
+	w.Header().Set("Content-Type", ctype)
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, outf)
+
+	return nil
 }
 
 func (me *directoryHandler) updateNegType(req *http.Request, filename string) {
@@ -112,11 +141,11 @@ func NewHandlerFuncRegistration(requestPath string,
 	return handlerFuncRegistrations[requestPath]
 }
 
-func expandAllHandlerFuncRegistrations() error {
+func expandAllHandlerFuncRegistrations(wwwRoot string) error {
 	debugf("Expanding all handler func registrations!")
 
 	for _, reg := range handlerFuncRegistrations {
-		err := expandHandlerFuncRegistration(reg)
+		err := expandHandlerFuncRegistration(wwwRoot, reg)
 		if err != nil {
 			return err
 		}
@@ -125,13 +154,13 @@ func expandAllHandlerFuncRegistrations() error {
 	return nil
 }
 
-func expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
+func expandHandlerFuncRegistration(wwwRoot string, reg *handlerFuncRegistration) error {
 	if path.Ext(reg.RequestPath) == ".*" {
 		debugf("Found glob registration %q, adding to directory handler",
 			reg.RequestPath)
 
-		err := addGlobToDirectoryHandler(path.Dir(reg.RequestPath),
-			reg.RequestPath, reg.HandlerFunc)
+		err := addGlobToDirectoryHandler(wwwRoot,
+			path.Dir(reg.RequestPath), reg.RequestPath, reg.HandlerFunc)
 		if err != nil {
 			return err
 		}
@@ -163,7 +192,7 @@ func registerHandlerFunc(reg *handlerFuncRegistration) error {
 	return nil
 }
 
-func addGlobToDirectoryHandler(dir, requestPath string,
+func addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 	handler func(http.ResponseWriter, *http.Request)) error {
 
 	var reg *handlerFuncRegistration
@@ -171,6 +200,7 @@ func addGlobToDirectoryHandler(dir, requestPath string,
 	dirHandlerReg, present := handlerFuncRegistrations[dir]
 	if !present {
 		dirHandler := &directoryHandler{
+			WwwRoot:         wwwRoot,
 			DirectoryPath:   dir,
 			PatternHandlers: map[string]*handlerFuncRegistration{},
 		}
