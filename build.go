@@ -27,13 +27,13 @@ import (
 )
 
 func main() {
-    goaspen.RunServerMain("{{.RootDir}}", "{{.GenServerBind}}", "{{.GenPackage}}")
+    goaspen.RunServerMain("{{.WwwRoot}}", "{{.GenServerBind}}", "{{.GenPackage}}")
 }
 `))
 )
 
 type siteBuilder struct {
-	RootDir       string
+	WwwRoot       string
 	OutputGopath  string
 	GenPackage    string
 	GenServerBind string
@@ -48,7 +48,7 @@ type siteBuilder struct {
 }
 
 type SiteBuilderCfg struct {
-	RootDir       string
+	WwwRoot       string
 	OutputGopath  string
 	GenPackage    string
 	GenServerBind string
@@ -58,7 +58,7 @@ type SiteBuilderCfg struct {
 }
 
 type siteIndex struct {
-	RootDir   string                      `json:"root_dir"`
+	WwwRoot   string                      `json:"root_dir"`
 	Simplates map[string]*simplateSummary `json:"simplates"`
 }
 
@@ -77,7 +77,7 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		goexe string
 	)
 
-	rootDir, err := filepath.Abs(cfg.RootDir)
+	rootDir, err := filepath.Abs(cfg.WwwRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 	}
 
 	sb := &siteBuilder{
-		RootDir:       rootDir,
+		WwwRoot:       rootDir,
 		OutputGopath:  outPath,
 		GenPackage:    genPkg,
 		GenServerBind: cfg.GenServerBind,
@@ -133,7 +133,7 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		packagePath: path.Join(outPath, "src", genPkg),
 		genServer:   fmt.Sprintf("%s/%s-http-server", genPkg, genPkg),
 		index: &siteIndex{
-			RootDir:   rootDir,
+			WwwRoot:   rootDir,
 			Simplates: map[string]*simplateSummary{},
 		},
 	}
@@ -237,7 +237,7 @@ func (me *siteBuilder) indexSimplate(simplate *simplate) {
 }
 
 func (me *siteBuilder) dumpSiteIndex() error {
-	idxPath := path.Join(me.RootDir, ".goaspen-index.json")
+	idxPath := path.Join(me.WwwRoot, ".goaspen-index.json")
 
 	out, err := os.Create(idxPath)
 	if err != nil {
@@ -355,6 +355,29 @@ func (me *siteBuilder) Build() error {
 	return nil
 }
 
+/*
+Build non-static simplates found in the given document root
+(SiteBuilderCfg.WwwRoot) into Go sources written to the src dir of a given
+GOPATH entry (SiteBuilderCfg.OutputGopath).  The generated package
+(SiteBuilderCfg.GenPackage) will be used as the output source directory name
+and written as the package declaration for each generated Go source file.  An
+http server source will also be written to a directory nested within the
+generated package.
+
+Sources may be formatted via `gofmt` by setting the passed-in
+SiteBuilderCfg.Format to true.  The generated package and http executable may
+be automatically compiled by setting the passed-in SiteBuilderCfg.Compile to
+true.
+
+The generated server will support the following options, defaulted to the values
+passed to BuildMain:
+
+            --www_root, -w: Filesystem path of the document publishing root
+     --network_address, -a: The IPv4 or IPv6 address to which the generated server
+                            will bind by default
+               --debug, -x: Print debugging output
+
+*/
 func BuildMain(cfg *SiteBuilderCfg) int {
 	builder, err := newSiteBuilder(cfg)
 	if err != nil {

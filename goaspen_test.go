@@ -82,7 +82,7 @@ var (
 	tmpdir = path.Join(os.TempDir(),
 		fmt.Sprintf("goaspen_test-%d", time.Now().UTC().UnixNano()))
 	goAspenGenDir = path.Join(tmpdir, "src", "goaspen_gen")
-	testSiteRoot  = path.Join(tmpdir, "test-site")
+	testWwwRoot   = path.Join(tmpdir, "test-site")
 	goCmd         string
 	noCleanup     bool
 	testSiteFiles = map[string]string{
@@ -138,7 +138,7 @@ func mkTestSite() string {
 	mkTmpDir()
 
 	for filePath, content := range testSiteFiles {
-		fullPath := path.Join(testSiteRoot, filePath)
+		fullPath := path.Join(testWwwRoot, filePath)
 		err := os.MkdirAll(path.Dir(fullPath), os.ModeDir|os.ModePerm)
 		if err != nil {
 			panic(err)
@@ -160,7 +160,7 @@ func mkTestSite() string {
 		}
 	}
 
-	return testSiteRoot
+	return testWwwRoot
 }
 
 func writeRenderedTemplate() (string, error) {
@@ -532,9 +532,9 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 	}
 }
 
-func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
+func TestNewSiteBuilderRequiresValidWwwRoot(t *testing.T) {
 	_, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       "/dev/null",
+		WwwRoot:       "/dev/null",
 		OutputGopath:  ".",
 		GenServerBind: ":9182",
 	})
@@ -545,7 +545,7 @@ func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
 
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 	_, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       ".",
+		WwwRoot:       ".",
 		OutputGopath:  "/dev/null",
 		GenServerBind: ":9182",
 	})
@@ -556,7 +556,7 @@ func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 
 func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       ".",
+		WwwRoot:       ".",
 		OutputGopath:  ".",
 		GenServerBind: ":9182",
 	})
@@ -570,7 +570,7 @@ func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
 	}
 }
 
-func TestSiteBuilderExposesRootDir(t *testing.T) {
+func TestSiteBuilderExposesWwwRoot(t *testing.T) {
 	mkTestSite()
 	if noCleanup {
 		fmt.Println("tmpdir =", tmpdir)
@@ -579,7 +579,7 @@ func TestSiteBuilderExposesRootDir(t *testing.T) {
 	}
 
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       testSiteRoot,
+		WwwRoot:       testWwwRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
 		Format:        true,
@@ -590,8 +590,8 @@ func TestSiteBuilderExposesRootDir(t *testing.T) {
 		return
 	}
 
-	if sb.RootDir != testSiteRoot {
-		t.Errorf("RootDir != %s: %s", testSiteRoot, sb.RootDir)
+	if sb.WwwRoot != testWwwRoot {
+		t.Errorf("WwwRoot != %s: %s", testWwwRoot, sb.WwwRoot)
 		return
 	}
 }
@@ -605,7 +605,7 @@ func TestSiteBuilderExposesOutputDir(t *testing.T) {
 	}
 
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       testSiteRoot,
+		WwwRoot:       testWwwRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
 		Format:        true,
@@ -631,7 +631,7 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 	}
 
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       testSiteRoot,
+		WwwRoot:       testWwwRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
 		MkOutDir:      true,
@@ -668,7 +668,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 	}
 
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       testSiteRoot,
+		WwwRoot:       testWwwRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
 		Format:        true,
@@ -746,7 +746,7 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 	}
 
 	sb, err := newSiteBuilder(&SiteBuilderCfg{
-		RootDir:       testSiteRoot,
+		WwwRoot:       testWwwRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
 		Format:        true,

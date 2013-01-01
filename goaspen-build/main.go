@@ -1,3 +1,15 @@
+/*
+Main entry point for goaspen.
+
+This executable's main responsibility is to parse command-line arguments and
+construct a goaspen.SiteBuilderCfg which is passed to goaspen.BuildMain.
+
+Something like a development cycle is supported via the `changes_reload` flag,
+which implies both the `run_server` (-s) and `compile` (-C) flags:
+
+    goaspen-build -w ./mysite/docroot -P mysite --changes_reload
+
+*/
 package main
 
 import (
@@ -97,7 +109,6 @@ func main() {
 	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
 	//"to configuration files in Go syntax that accept config JSON on "+
 	//"stdin and write config JSON to stdout.", configFiles)
-
 	// TODO
 	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
 	//"most of goaspen's internal logging, 2 will suppress all it",
@@ -158,7 +169,7 @@ func main() {
 
 	for {
 		retcode = goaspen.BuildMain(&goaspen.SiteBuilderCfg{
-			RootDir:       wwwRoot,
+			WwwRoot:       wwwRoot,
 			OutputGopath:  outPath,
 			GenPackage:    genPkg,
 			GenServerBind: genServerBind,
