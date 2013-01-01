@@ -79,6 +79,6 @@ func (me *serverWrapper) Run() error {
 		return err
 	}
 
-	fmt.Printf("%s-server serving on %q\n", me.PackageName, me.ServerBind)
+	fmt.Printf("%s-http-server serving on %q\n", me.PackageName, me.ServerBind)
 	return http.ListenAndServe(me.ServerBind, nil)
 }
