@@ -2,6 +2,7 @@ package goaspen
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,10 +13,15 @@ var (
 )
 
 type treeWalker struct {
-	Root string
+	PackageName string
+	Root        string
 }
 
-func newTreeWalker(rootDir string) (*treeWalker, error) {
+func newTreeWalker(packageName, rootDir string) (*treeWalker, error) {
+	if len(packageName) == 0 {
+		return nil, fmt.Errorf("Package name must be non-empty!")
+	}
+
 	fi, err := os.Stat(rootDir)
 	if err != nil {
 		return nil, err
@@ -25,7 +31,12 @@ func newTreeWalker(rootDir string) (*treeWalker, error) {
 		return nil, InvalidTreeWalkerRoot
 	}
 
-	return &treeWalker{Root: rootDir}, nil
+	tw := &treeWalker{
+		PackageName: packageName,
+		Root:        rootDir,
+	}
+
+	return tw, nil
 }
 
 func (me *treeWalker) Simplates() (<-chan *simplate, error) {
@@ -55,7 +66,8 @@ func (me *treeWalker) Simplates() (<-chan *simplate, error) {
 					return err
 				}
 
-				smplt, err := newSimplateFromString(me.Root, path, string(content))
+				smplt, err := newSimplateFromString(me.PackageName,
+					me.Root, path, string(content))
 				if err != nil {
 					return err
 				}

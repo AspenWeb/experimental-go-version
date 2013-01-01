@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	http406 = newErrHttp406()
-	//DefaultCharsetDynamic = "utf-8"
+	http406               = newErrHttp406()
+	DefaultCharsetDynamic = "utf-8"
+	DefaultCharsetStatic  = DefaultCharsetDynamic
 
 	defaultAcceptHeader = "text/html,application/xhtml+xml," +
 		"application/xml;q=0.9,*/*;q=0.8"
@@ -23,6 +24,7 @@ type errorHttp406 struct {
 }
 
 type HTTPResponseWrapper struct {
+	app *App
 	w   http.ResponseWriter
 	req *http.Request
 
@@ -47,21 +49,6 @@ func (me *errorHttp406) Error() string {
 	return me.msg
 }
 
-func NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPResponseWrapper {
-	return &HTTPResponseWrapper{
-		w:   w,
-		req: req,
-
-		statusCode: http.StatusOK,
-		bodyBytes:  []byte(""),
-
-		contentType:         "text/html",
-		contentTypeHandlers: make(map[string]func(*HTTPResponseWrapper)),
-
-		err: nil,
-	}
-}
-
 func (me *HTTPResponseWrapper) SetContentType(contentType string) {
 	if len(contentType) == 0 {
 		debugf("Ignoring call to `SetContentType` because argument is empty!")
@@ -69,7 +56,7 @@ func (me *HTTPResponseWrapper) SetContentType(contentType string) {
 	}
 
 	if strings.HasPrefix(contentType, "text/") && !strings.Contains(contentType, "charset=") {
-		contentType = contentType + "; charset=utf-8" // XXX get default charset from config?
+		contentType = fmt.Sprintf("%v; charset=%v", contentType, me.app.CharsetDynamic)
 	}
 
 	me.contentType = contentType
@@ -92,7 +79,8 @@ func (me *HTTPResponseWrapper) SetError(err error) {
 }
 
 func (me *HTTPResponseWrapper) respond500(err error) {
-	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	me.w.Header().Set("Content-Type",
+		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}
@@ -101,7 +89,8 @@ func (me *HTTPResponseWrapper) respond500(err error) {
 }
 
 func (me *HTTPResponseWrapper) respond406(err error) {
-	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	me.w.Header().Set("Content-Type",
+		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}

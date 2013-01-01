@@ -34,13 +34,14 @@ var (
 )
 
 type simplate struct {
-	SiteRoot      string          `json:"-"`
-	Filename      string          `json:"-"`
-	Type          string          `json:"type"`
-	ContentType   string          `json:"content_type"`
-	InitPage      *simplatePage   `json:"-"`
-	LogicPage     *simplatePage   `json:"-"`
-	TemplatePages []*simplatePage `json:"-"`
+	GenPackage    string
+	SiteRoot      string
+	Filename      string
+	Type          string
+	ContentType   string
+	InitPage      *simplatePage
+	LogicPage     *simplatePage
+	TemplatePages []*simplatePage
 }
 
 type simplatePage struct {
@@ -54,7 +55,9 @@ type simplatePageSpec struct {
 	Renderer    string
 }
 
-func newSimplateFromString(siteRoot, filename, content string) (*simplate, error) {
+func newSimplateFromString(packageName,
+	siteRoot, filename, content string) (*simplate, error) {
+
 	var err error
 
 	filename, err = filepath.Abs(filename)
@@ -71,6 +74,7 @@ func newSimplateFromString(siteRoot, filename, content string) (*simplate, error
 	nbreaks := len(rawPages) - 1
 
 	s := &simplate{
+		GenPackage:  packageName,
 		SiteRoot:    siteRoot,
 		Filename:    filename,
 		Type:        SimplateTypeStatic,

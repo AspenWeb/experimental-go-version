@@ -7,7 +7,7 @@ import (
 
 var (
 	simplateTmplCommonHeader = `
-package goaspen_gen
+package {{.GenPackage}}
 // GENERATED FILE - DO NOT EDIT
 // Rebuild with goaspen-build!
 
@@ -32,13 +32,15 @@ var (
         "{{.Spec.ContentType}}": template.Must(template.New("{{.Parent.FuncName}}!{{.Spec.ContentType}}").Parse(__BACKTICK__{{.Body}}__BACKTICK__)),
         {{end}}
     }
-    _ = goaspen.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    local{{.FuncName}}App = goaspen.DeclareApp("{{.GenPackage}}")
+    _ = local{{.FuncName}}App.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
 )
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
     var err error
+    app := goaspen.LookupApp("{{.GenPackage}}")
     ctx := make(map[string]interface{})
-    response := goaspen.NewHTTPResponseWrapper(w, req)
+    response := app.NewHTTPResponseWrapper(w, req)
 
     {{.LogicPage.Body}}
 
@@ -71,13 +73,15 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
 {{.InitPage.Body}}
 
 var (
-    _ = goaspen.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    local{{.FuncName}}App = goaspen.DeclareApp("{{.GenPackage}}")
+    _ = local{{.FuncName}}App.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
 )
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
     var err error
+    app := goaspen.LookupApp("{{.GenPackage}}")
     ctx := make(map[string]interface{})
-    response := goaspen.NewHTTPResponseWrapper(w, req)
+    response := app.NewHTTPResponseWrapper(w, req)
 
     response.RegisterContentTypeHandler("{{.ContentType}}",
         func(response *goaspen.HTTPResponseWrapper) {

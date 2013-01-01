@@ -12,24 +12,36 @@ import (
 	"github.com/jteeuwen/go-pkg-optarg"
 )
 
-type serverWrapper struct {
+type serverContext struct {
 	PackageName string
 	ServerBind  string
 	WwwRoot     string
+	Debug       bool
+
+	app *App
 }
 
-func AddCommonServingOptions(serverBind, wwwRoot string, debug bool) {
+func AddCommonServingOptions(serverBind,
+	wwwRoot, charsetDynamic, charsetStatic string, debug bool) {
+
 	optarg.Add("w", "www_root",
 		"Filesystem path of the document publishing root", wwwRoot)
 	optarg.Add("a", "network_address", "The IPv4 or IPv6 address to which "+
 		"the generated server will bind by default", serverBind)
 	optarg.Add("x", "debug", "Print debugging output", debug)
+	optarg.Add("", "charset_dynamic", "Set as the charset for rendered "+
+		"and negotiated resources of Content-Type text/*", charsetDynamic)
+	optarg.Add("", "charset_static", "Set as the charset for static "+
+		"resources of Content-Type text/*", charsetStatic)
 }
 
-func RunServerMain(wwwRoot, serverBind, packageName string) {
+func RunServerMain(wwwRoot, serverBind, packageName,
+	charsetDynamic, charsetStatic string) {
+
 	debug := false
 
-	AddCommonServingOptions(serverBind, wwwRoot, debug)
+	AddCommonServingOptions(serverBind,
+		wwwRoot, charsetDynamic, charsetStatic, debug)
 	for opt := range optarg.Parse() {
 		switch opt.Name {
 		case "network_address":
@@ -47,24 +59,29 @@ func RunServerMain(wwwRoot, serverBind, packageName string) {
 	}
 
 	SetDebug(debug)
+	app := DeclareApp(packageName)
+	app.Configure(serverBind, wwwRoot, charsetDynamic, charsetStatic, debug)
 
-	server := newServerWrapper(packageName, serverBind, wwwRoot)
-
-	err = server.Run()
+	err = app.RunServer()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func newServerWrapper(packageName, serverBind, wwwRoot string) *serverWrapper {
-	return &serverWrapper{
+func newServerContext(app *App, packageName, serverBind, wwwRoot string,
+	debug bool) *serverContext {
+
+	return &serverContext{
 		PackageName: packageName,
 		ServerBind:  serverBind,
 		WwwRoot:     wwwRoot,
+		Debug:       debug,
+
+		app: app,
 	}
 }
 
-func (me *serverWrapper) serverQuitListener() {
+func (me *serverContext) serverQuitListener() {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGQUIT)
 	<-ch
@@ -72,18 +89,8 @@ func (me *serverWrapper) serverQuitListener() {
 	os.Exit(0)
 }
 
-func (me *serverWrapper) Run() error {
+func (me *serverContext) Run() error {
 	go me.serverQuitListener()
-
-	err := expandAllHandlerFuncRegistrations(me.WwwRoot)
-	if err != nil {
-		return err
-	}
-
-	err = registerAllHandlerFuncs()
-	if err != nil {
-		return err
-	}
 
 	fmt.Printf("%s-http-server serving on %q\n", me.PackageName, me.ServerBind)
 	return http.ListenAndServe(me.ServerBind, nil)

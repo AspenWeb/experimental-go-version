@@ -84,8 +84,8 @@ func main() {
 	}
 
 	changesReload := false
-	//charsetDynamic := goaspen.DefaultCharsetDynamic
-	//charsetStatic := ""
+	charsetDynamic := goaspen.DefaultCharsetDynamic
+	charsetStatic := goaspen.DefaultCharsetStatic
 	compile := true
 	//configFiles := []string{}
 	debug := false
@@ -102,7 +102,8 @@ func main() {
 	optarg.Add("h", "help", "Show this help message and exit", false)
 
 	optarg.Header("Serving Options")
-	goaspen.AddCommonServingOptions(genServerBind, wwwRoot, debug)
+	goaspen.AddCommonServingOptions(genServerBind,
+		wwwRoot, charsetDynamic, charsetStatic, debug)
 	optarg.Add("s", "run_server",
 		"Start server once compiled (implies `-C`)", runServer)
 	// TODO
@@ -127,13 +128,6 @@ func main() {
 		"simplates to rebuild, then re-exec the generated server binary "+
 		"(implies '--compile' and '--run_server').",
 		changesReload)
-
-	// TODO
-	//optarg.Header("Extended Options")
-	//optarg.Add("", "charset_dynamic", "Set as the charset for rendered "+
-	//"and negotiated resources of Content-Type text/*", charsetDynamic)
-	//optarg.Add("", "charset_static", "Set as the charset for static "+
-	//"resources of Content-Type text/*", charsetStatic)
 
 	for opt := range optarg.Parse() {
 		switch opt.Name {
@@ -161,6 +155,10 @@ func main() {
 			value := opt.Bool()
 			runServer = value
 			compile = value
+		case "charset_dynamic":
+			charsetDynamic = opt.String()
+		case "charset_static":
+			charsetStatic = opt.String()
 		}
 	}
 
@@ -177,6 +175,9 @@ func main() {
 			Format:        format,
 			MkOutDir:      mkOutDir,
 			Compile:       compile,
+
+			CharsetDynamic: charsetDynamic,
+			CharsetStatic:  charsetStatic,
 		})
 
 		if !runServer {

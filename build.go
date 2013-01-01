@@ -1,7 +1,6 @@
 package goaspen
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,18 +26,25 @@ import (
 )
 
 func main() {
-    goaspen.RunServerMain("{{.WwwRoot}}", "{{.GenServerBind}}", "{{.GenPackage}}")
+    goaspen.RunServerMain("{{.WwwRoot}}",
+        "{{.GenServerBind}}", "{{.GenPackage}}",
+        "{{.CharsetDynamic}}", "{{.CharsetStatic}}")
 }
 `))
 )
 
 type siteBuilder struct {
-	WwwRoot       string
-	OutputGopath  string
-	GenPackage    string
-	GenServerBind string
-	Format        bool
-	Compile       bool
+	// also used as defaults in generated server binary
+	WwwRoot        string
+	GenPackage     string
+	GenServerBind  string
+	CharsetStatic  string
+	CharsetDynamic string
+
+	// used primarily for compile time
+	OutputGopath string
+	Format       bool
+	Compile      bool
 
 	goexe       string
 	walker      *treeWalker
@@ -55,6 +61,9 @@ type SiteBuilderCfg struct {
 	Format        bool
 	MkOutDir      bool
 	Compile       bool
+
+	CharsetStatic  string
+	CharsetDynamic string
 }
 
 type siteIndex struct {
@@ -115,7 +124,8 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		}
 	}
 
-	walker, err := newTreeWalker(rootDir)
+	debugf("Creating new tree walker with package name %q, root dir %q", genPkg, rootDir)
+	walker, err := newTreeWalker(genPkg, rootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +137,9 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		GenServerBind: cfg.GenServerBind,
 		Format:        cfg.Format,
 		Compile:       cfg.Compile,
+
+		CharsetDynamic: cfg.CharsetDynamic,
+		CharsetStatic:  cfg.CharsetStatic,
 
 		goexe:       goexe,
 		walker:      walker,
@@ -271,9 +284,9 @@ func (me *siteBuilder) compileSources() error {
 
 	defer os.Setenv("GOPATH", origGopath)
 
-	var out bytes.Buffer
 	installPkgCmd := exec.Command(me.goexe, "install", me.GenPackage)
-	installPkgCmd.Stdout = &out
+	installPkgCmd.Stdout = os.Stdout
+	installPkgCmd.Stderr = os.Stderr
 
 	err = installPkgCmd.Run()
 	if err != nil {
@@ -281,7 +294,8 @@ func (me *siteBuilder) compileSources() error {
 	}
 
 	installBinCmd := exec.Command(me.goexe, "install", me.genServer)
-	//installBinCmd.Stdout = &out
+	installBinCmd.Stdout = os.Stdout
+	installPkgCmd.Stderr = os.Stderr
 
 	err = installBinCmd.Run()
 	if err != nil {
@@ -300,9 +314,9 @@ func (me *siteBuilder) formatOneSource(sourceFile string) error {
 
 	defer os.Setenv("GOPATH", origGopath)
 
-	var out bytes.Buffer
 	formatCmd := exec.Command(me.goexe, "fmt", me.GenPackage)
-	formatCmd.Stdout = &out
+	formatCmd.Stdout = os.Stdout
+	formatCmd.Stderr = os.Stderr
 
 	err = formatCmd.Run()
 	if err != nil {

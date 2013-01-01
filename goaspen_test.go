@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	BASIC_RENDERED_TXT_SIMPLATE = `
+	basicRenderedTxtSimplate = `
 import (
     "time"
 )
@@ -37,10 +37,10 @@ ctx["D"] = &RDance{
 
 {{.D.Who}} Dance {{.D.When}}!
 `
-	BASIC_STATIC_TXT_SIMPLATE = `
+	basicStaticTxtSimplate = `
 Everybody Dance Now!
 `
-	BASIC_JSON_SIMPLATE = `
+	basicJsonSimplate = `
 import (
     "time"
 )
@@ -56,7 +56,7 @@ ctx["D"] = &JDance{
 }
 response.SetBody(ctx["D"])
 `
-	BASIC_NEGOTIATED_SIMPLATE = `
+	basicNegotiatedSimplate = `
 import (
     "time"
 )
@@ -86,11 +86,11 @@ var (
 	goCmd         string
 	noCleanup     bool
 	testSiteFiles = map[string]string{
-		"hams/bone/derp":                               BASIC_NEGOTIATED_SIMPLATE,
-		"shill/cans.txt":                               BASIC_RENDERED_TXT_SIMPLATE,
-		"hat/v.json":                                   BASIC_JSON_SIMPLATE,
+		"hams/bone/derp":                               basicNegotiatedSimplate,
+		"shill/cans.txt":                               basicRenderedTxtSimplate,
+		"hat/v.json":                                   basicJsonSimplate,
 		"silmarillion.handlebar.mustache.moniker.html": "<html>INVALID AS BUTT</html>",
-		"Big CMS/Owns_UR Contents/flurb.txt":           BASIC_STATIC_TXT_SIMPLATE,
+		"Big CMS/Owns_UR Contents/flurb.txt":           basicStaticTxtSimplate,
 	}
 )
 
@@ -164,7 +164,7 @@ func mkTestSite() string {
 }
 
 func writeRenderedTemplate() (string, error) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		return "", err
 	}
@@ -191,18 +191,14 @@ func writeRenderedTemplate() (string, error) {
 func runGoCommandOnGoAspenGen(command string) error {
 	cmd := exec.Command(goCmd, command, "goaspen_gen")
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	if noCleanup {
-		fmt.Println(out.String())
-	}
 	return nil
 }
 
@@ -215,7 +211,7 @@ func buildGoAspenGen() error {
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
 	if err != nil {
 		t.Error(err)
 		return
@@ -228,7 +224,7 @@ func TestSimplateKnowsItsFilename(t *testing.T) {
 }
 
 func TestSimplateKnowsItsContentType(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
 	if err != nil {
 		t.Error(err)
 		return
@@ -243,7 +239,7 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 }
 
 func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/nothing.txt", "foo\nham\n")
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/nothing.txt", "foo\nham\n")
 	if err != nil {
 		t.Error(err)
 		return
@@ -255,7 +251,7 @@ func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -267,7 +263,7 @@ func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestDetectsRenderedSimplate(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -279,7 +275,7 @@ func TestDetectsRenderedSimplate(t *testing.T) {
 }
 
 func TestDetectsStaticSimplate(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -291,7 +287,7 @@ func TestDetectsStaticSimplate(t *testing.T) {
 }
 
 func TestDetectsJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -303,7 +299,7 @@ func TestDetectsJSONSimplates(t *testing.T) {
 }
 
 func TestDetectsNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/hork", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hork", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -316,7 +312,7 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -332,7 +328,7 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -344,7 +340,7 @@ func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -356,7 +352,7 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -368,7 +364,7 @@ func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -380,7 +376,7 @@ func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -392,7 +388,7 @@ func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -404,7 +400,7 @@ func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated.txt", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -416,7 +412,7 @@ func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated.txt", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -428,7 +424,7 @@ func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
-	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -490,8 +486,16 @@ func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 	}
 }
 
+func TestTreeWalkerRequiresNonEmptyPackageName(t *testing.T) {
+	_, err := newTreeWalker("", os.TempDir())
+	if err == nil {
+		t.Errorf("New tree walker failed to reject empty package")
+		return
+	}
+}
+
 func TestTreeWalkerRequiresValidDirectoryRoot(t *testing.T) {
-	_, err := newTreeWalker("/dev/null")
+	_, err := newTreeWalker("goaspen_gen", path.Join(tmpdir, "dev/null"))
 	if err == nil {
 		t.Errorf("New tree walker failed to reject invalid dir!")
 		return
@@ -506,7 +510,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	tw, err := newTreeWalker(siteRoot)
+	tw, err := newTreeWalker("goaspen_gen", siteRoot)
 	if err != nil {
 		t.Error(err)
 		return
@@ -534,7 +538,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 
 func TestNewSiteBuilderRequiresValidWwwRoot(t *testing.T) {
 	_, err := newSiteBuilder(&SiteBuilderCfg{
-		WwwRoot:       "/dev/null",
+		WwwRoot:       path.Join(tmpdir, "dev/null"),
 		OutputGopath:  ".",
 		GenServerBind: ":9182",
 	})
@@ -546,7 +550,7 @@ func TestNewSiteBuilderRequiresValidWwwRoot(t *testing.T) {
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 	_, err := newSiteBuilder(&SiteBuilderCfg{
 		WwwRoot:       ".",
-		OutputGopath:  "/dev/null",
+		OutputGopath:  path.Join(tmpdir, "dev/null"),
 		GenServerBind: ":9182",
 	})
 	if err == nil {
@@ -654,7 +658,7 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		return
 	}
 
-	if fi.Size() < int64(len(BASIC_RENDERED_TXT_SIMPLATE)) {
+	if fi.Size() < int64(len(basicRenderedTxtSimplate)) {
 		t.Errorf("Generated file is too small! %v", fi.Size())
 	}
 }
