@@ -6,10 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/jteeuwen/go-pkg-optarg"
+	"github.com/kless/go-exp/inotify"
 	"github.com/meatballhat/goaspen"
 )
 
@@ -21,7 +22,8 @@ into Go sources written to generated package (-p) in the output GOPATH base
 (-o), optionally running 'go fmt' (-F).  The output GOPATH base must already
 exist, or the '-m' flag may be passed to ensure it exists.
 `
-	usageInfo = ""
+	usageInfo    = ""
+	changeEvents = inotify.IN_CREATE | inotify.IN_DELETE | inotify.IN_MODIFY | inotify.IN_MOVE
 )
 
 func init() {
@@ -29,11 +31,37 @@ func init() {
 	*usageInfoAddr = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
-func changeMonitor(q chan bool) {
-	// TODO implement real monitoring with github.com/kless/go-exp/inotify
-	log.Println("Simulating change in 1 second!")
-	time.Sleep(1000 * time.Millisecond)
-	q <- true
+func changeMonitor(wwwRoot string, q chan bool) error {
+	watcher, err := inotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	defer watcher.Close()
+
+	err = filepath.Walk(wwwRoot,
+		func(pathEntry string, info os.FileInfo, err error) error {
+			return watcher.Watch(pathEntry)
+		})
+
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case ev := <-watcher.Event:
+			if ev.Mask&changeEvents != 0 {
+				log.Println("Got change event:", ev)
+				q <- true
+				return nil
+			}
+		case err := <-watcher.Error:
+			log.Panicln("error:", err)
+		}
+	}
+
+	return nil
 }
 
 func main() {
@@ -82,11 +110,11 @@ func main() {
 	optarg.Add("m", "make_outdir",
 		"Make output GOPATH base if not exists", mkOutDir)
 	optarg.Add("C", "compile", "Compile generated sources", compile)
-	// TODO
-	//optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
-	//"changes to configuration files and document root files will cause "+
-	//"simplates to rebuild, then re-exec the generated server binary.",
-	//changesReload)
+	optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
+		"changes to configuration files and document root files will cause "+
+		"simplates to rebuild, then re-exec the generated server binary "+
+		"(implies '--compile' and '--run_server').",
+		changesReload)
 
 	// TODO
 	//optarg.Header("Extended Options")
@@ -112,6 +140,11 @@ func main() {
 			mkOutDir = opt.Bool()
 		case "debug":
 			debug = opt.Bool()
+		case "changes_reload":
+			value := opt.Bool()
+			runServer = value
+			compile = value
+			changesReload = value
 		case "run_server":
 			value := opt.Bool()
 			runServer = value
@@ -152,7 +185,7 @@ func main() {
 			if <-q {
 				srvCmd.Process.Signal(syscall.SIGQUIT)
 			}
-			// TODO listen to an os.Signal channel or some such instead of waiting
+
 			err = srvCmd.Wait()
 			if _, ok := err.(*exec.ExitError); ok {
 				ret <- 9
@@ -164,7 +197,7 @@ func main() {
 		}(retChan, quitChan)
 
 		if changesReload {
-			go changeMonitor(quitChan)
+			go changeMonitor(wwwRoot, quitChan)
 		} else {
 			quitChan <- false
 		}
