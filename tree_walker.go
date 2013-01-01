@@ -11,11 +11,11 @@ var (
 	InvalidTreeWalkerRoot = errors.New("Invalid tree walker root given")
 )
 
-type TreeWalker struct {
+type treeWalker struct {
 	Root string
 }
 
-func NewTreeWalker(rootDir string) (*TreeWalker, error) {
+func NewTreeWalker(rootDir string) (*treeWalker, error) {
 	fi, err := os.Stat(rootDir)
 	if err != nil {
 		return nil, err
@@ -25,11 +25,11 @@ func NewTreeWalker(rootDir string) (*TreeWalker, error) {
 		return nil, InvalidTreeWalkerRoot
 	}
 
-	return &TreeWalker{Root: rootDir}, nil
+	return &treeWalker{Root: rootDir}, nil
 }
 
-func (me *TreeWalker) Simplates() (<-chan *Simplate, error) {
-	schan := make(chan *Simplate)
+func (me *treeWalker) Simplates() (<-chan *simplate, error) {
+	schan := make(chan *simplate)
 
 	go func() {
 		filepath.Walk(me.Root,
@@ -65,5 +65,5 @@ func (me *TreeWalker) Simplates() (<-chan *Simplate, error) {
 		close(schan)
 	}()
 
-	return (<-chan *Simplate)(schan), nil
+	return (<-chan *simplate)(schan), nil
 }

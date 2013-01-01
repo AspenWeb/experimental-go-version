@@ -15,24 +15,24 @@ const (
 )
 
 var (
-	HandlerFuncRegistrations = map[string]*HandlerFuncRegistration{}
+	handlerFuncRegistrations = map[string]*handlerFuncRegistration{}
 
 	regLock sync.RWMutex
 )
 
-type HandlerFuncRegistration struct {
+type handlerFuncRegistration struct {
 	RequestPath string
 	HandlerFunc func(http.ResponseWriter, *http.Request)
-	Receiver    *DirectoryHandler
+	Receiver    *directoryHandler
 }
 
-type DirectoryHandler struct {
+type directoryHandler struct {
 	SiteRoot        string
 	DirectoryPath   string
-	PatternHandlers map[string]*HandlerFuncRegistration
+	PatternHandlers map[string]*handlerFuncRegistration
 }
 
-func (me *DirectoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
+func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	debugf("Handling directory response for %q", req.URL.Path)
 	me.updateNegType(req, req.URL.Path)
 
@@ -65,19 +65,19 @@ func (me *DirectoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (me *DirectoryHandler) AddGlob(pathGlob string,
-	reg *HandlerFuncRegistration) error {
+func (me *directoryHandler) AddGlob(pathGlob string,
+	reg *handlerFuncRegistration) error {
 
 	debugf("Adding glob %q to pattern handlers for %q", pathGlob, me.DirectoryPath)
 	me.PatternHandlers[pathGlob] = reg
 	return nil
 }
 
-func (me *DirectoryHandler) ServeStatic(w http.ResponseWriter, req *http.Request) error {
+func (me *directoryHandler) ServeStatic(w http.ResponseWriter, req *http.Request) error {
 	return errors.New("Not implemented, so pretending nothing is here!")
 }
 
-func (me *DirectoryHandler) updateNegType(req *http.Request, filename string) {
+func (me *directoryHandler) updateNegType(req *http.Request, filename string) {
 	mediaType := mime.TypeByExtension(path.Ext(filename))
 	if len(mediaType) == 0 {
 		mediaType = "text/html" // FIXME get default from config
@@ -87,35 +87,35 @@ func (me *DirectoryHandler) updateNegType(req *http.Request, filename string) {
 }
 
 func NewHandlerFuncRegistration(requestPath string,
-	handler func(http.ResponseWriter, *http.Request)) *HandlerFuncRegistration {
+	handler func(http.ResponseWriter, *http.Request)) *handlerFuncRegistration {
 
 	if len(requestPath) < 1 {
-		panic(errors.New(fmt.Sprintf("Invalid request path %q", requestPath)))
+		panic(fmt.Errorf("Invalid request path %q", requestPath))
 	}
 
 	regLock.RLock()
 	defer regLock.RUnlock()
 
-	HandlerFuncRegistrations[requestPath] = &HandlerFuncRegistration{
+	handlerFuncRegistrations[requestPath] = &handlerFuncRegistration{
 		RequestPath: requestPath,
 		HandlerFunc: handler,
 	}
 
 	if !strings.HasSuffix(requestPath, "/") && len(path.Ext(requestPath)) == 0 {
 		pathGlob := requestPath + ".*"
-		HandlerFuncRegistrations[pathGlob] = &HandlerFuncRegistration{
+		handlerFuncRegistrations[pathGlob] = &handlerFuncRegistration{
 			RequestPath: pathGlob,
 			HandlerFunc: handler,
 		}
 	}
 
-	return HandlerFuncRegistrations[requestPath]
+	return handlerFuncRegistrations[requestPath]
 }
 
-func ExpandAllHandlerFuncRegistrations() error {
+func expandAllHandlerFuncRegistrations() error {
 	debugf("Expanding all handler func registrations!")
 
-	for _, reg := range HandlerFuncRegistrations {
+	for _, reg := range handlerFuncRegistrations {
 		err := expandHandlerFuncRegistration(reg)
 		if err != nil {
 			return err
@@ -125,12 +125,12 @@ func ExpandAllHandlerFuncRegistrations() error {
 	return nil
 }
 
-func expandHandlerFuncRegistration(reg *HandlerFuncRegistration) error {
+func expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
 	if path.Ext(reg.RequestPath) == ".*" {
 		debugf("Found glob registration %q, adding to directory handler",
 			reg.RequestPath)
 
-		err := AddGlobToDirectoryHandler(path.Dir(reg.RequestPath),
+		err := addGlobToDirectoryHandler(path.Dir(reg.RequestPath),
 			reg.RequestPath, reg.HandlerFunc)
 		if err != nil {
 			return err
@@ -142,10 +142,10 @@ func expandHandlerFuncRegistration(reg *HandlerFuncRegistration) error {
 	return nil
 }
 
-func RegisterAllHandlerFuncs() error {
+func registerAllHandlerFuncs() error {
 	debugf("Registering all handler funcs!")
 
-	for _, reg := range HandlerFuncRegistrations {
+	for _, reg := range handlerFuncRegistrations {
 		err := registerHandlerFunc(reg)
 		if err != nil {
 			return err
@@ -155,7 +155,7 @@ func RegisterAllHandlerFuncs() error {
 	return nil
 }
 
-func registerHandlerFunc(reg *HandlerFuncRegistration) error {
+func registerHandlerFunc(reg *handlerFuncRegistration) error {
 	regLock.RLock()
 	defer regLock.RUnlock()
 
@@ -163,16 +163,16 @@ func registerHandlerFunc(reg *HandlerFuncRegistration) error {
 	return nil
 }
 
-func AddGlobToDirectoryHandler(dir, requestPath string,
+func addGlobToDirectoryHandler(dir, requestPath string,
 	handler func(http.ResponseWriter, *http.Request)) error {
 
-	var reg *HandlerFuncRegistration
+	var reg *handlerFuncRegistration
 
-	dirHandlerReg, present := HandlerFuncRegistrations[dir]
+	dirHandlerReg, present := handlerFuncRegistrations[dir]
 	if !present {
-		dirHandler := &DirectoryHandler{
+		dirHandler := &directoryHandler{
 			DirectoryPath:   dir,
-			PatternHandlers: map[string]*HandlerFuncRegistration{},
+			PatternHandlers: map[string]*handlerFuncRegistration{},
 		}
 
 		reg = NewHandlerFuncRegistration(dir,
@@ -182,16 +182,16 @@ func AddGlobToDirectoryHandler(dir, requestPath string,
 		reg.Receiver = dirHandler
 	}
 
-	dirHandlerReg = HandlerFuncRegistrations[dir]
+	dirHandlerReg = handlerFuncRegistrations[dir]
 	if dirHandlerReg.Receiver == nil {
-		msg := fmt.Sprintf("Cannot add glob to directory handler for %q", dir)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot add glob to directory handler for %q", dir)
 	}
 
-	globReg := &HandlerFuncRegistration{
+	globReg := &handlerFuncRegistration{
 		RequestPath: requestPath,
 		HandlerFunc: handler,
 	}
+
 	err := dirHandlerReg.Receiver.AddGlob(requestPath, globReg)
 	if err != nil {
 		return err

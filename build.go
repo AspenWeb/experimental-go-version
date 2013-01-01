@@ -3,7 +3,6 @@ package goaspen
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,7 +32,7 @@ func main() {
 `))
 )
 
-type SiteBuilder struct {
+type siteBuilder struct {
 	RootDir       string
 	OutputGopath  string
 	GenPackage    string
@@ -42,10 +41,10 @@ type SiteBuilder struct {
 	Compile       bool
 
 	goexe       string
-	walker      *TreeWalker
+	walker      *treeWalker
 	packagePath string
 	genServer   string
-	index       map[string]*Simplate
+	index       *siteIndex
 }
 
 type SiteBuilderCfg struct {
@@ -58,11 +57,21 @@ type SiteBuilderCfg struct {
 	Compile       bool
 }
 
+type siteIndex struct {
+	RootDir   string                      `json:"root_dir"`
+	Simplates map[string]*simplateSummary `json:"simplates"`
+}
+
+type simplateSummary struct {
+	Type        string `json:"type"`
+	ContentType string `json:"content_type"`
+}
+
 func init() {
 	*defaultOutDirAddr = strings.Split(os.Getenv("GOPATH"), ":")[0]
 }
 
-func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
+func NewSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 	var (
 		err   error
 		goexe string
@@ -102,7 +111,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		}
 
 		if !outPathFi.IsDir() {
-			return nil, errors.New(fmt.Sprintf("Invalid build output directory specified: %v", outPath))
+			return nil, fmt.Errorf("Invalid build output directory specified: %v", outPath)
 		}
 	}
 
@@ -111,7 +120,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		return nil, err
 	}
 
-	sb := &SiteBuilder{
+	sb := &siteBuilder{
 		RootDir:       rootDir,
 		OutputGopath:  outPath,
 		GenPackage:    genPkg,
@@ -123,13 +132,16 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*SiteBuilder, error) {
 		walker:      walker,
 		packagePath: path.Join(outPath, "src", genPkg),
 		genServer:   fmt.Sprintf("%s/%s-http-server", genPkg, genPkg),
-		index:       map[string]*Simplate{},
+		index: &siteIndex{
+			RootDir:   rootDir,
+			Simplates: map[string]*simplateSummary{},
+		},
 	}
 
 	return sb, nil
 }
 
-func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
+func (me *siteBuilder) writeOneSource(simplate *simplate) error {
 	if simplate.Type == SimplateTypeStatic {
 		return nil
 	}
@@ -167,7 +179,7 @@ func (me *SiteBuilder) writeOneSource(simplate *Simplate) error {
 	return nil
 }
 
-func (me *SiteBuilder) writeGenServer() error {
+func (me *siteBuilder) writeGenServer() error {
 	dirname := path.Join(me.OutputGopath, "src", me.genServer)
 	err := os.MkdirAll(dirname, os.ModeDir|(os.FileMode)(0755))
 	if err != nil {
@@ -189,7 +201,7 @@ func (me *SiteBuilder) writeGenServer() error {
 	return nil
 }
 
-func (me *SiteBuilder) writeSources() error {
+func (me *siteBuilder) writeSources() error {
 	simplates, err := me.walker.Simplates()
 	if err != nil {
 		return err
@@ -217,11 +229,14 @@ func (me *SiteBuilder) writeSources() error {
 	return nil
 }
 
-func (me *SiteBuilder) indexSimplate(simplate *Simplate) {
-	me.index[fmt.Sprintf("/%v", simplate.Filename)] = simplate
+func (me *siteBuilder) indexSimplate(simplate *simplate) {
+	me.index.Simplates[fmt.Sprintf("/%v", simplate.Filename)] = &simplateSummary{
+		Type:        simplate.Type,
+		ContentType: simplate.ContentType,
+	}
 }
 
-func (me *SiteBuilder) dumpSiteIndex() error {
+func (me *siteBuilder) dumpSiteIndex() error {
 	idxPath := path.Join(me.RootDir, ".goaspen-index.json")
 
 	out, err := os.Create(idxPath)
@@ -247,7 +262,7 @@ func (me *SiteBuilder) dumpSiteIndex() error {
 	return nil
 }
 
-func (me *SiteBuilder) compileSources() error {
+func (me *siteBuilder) compileSources() error {
 	origGopath := os.Getenv("GOPATH")
 	err := os.Setenv("GOPATH", fmt.Sprintf("%s:%s", me.OutputGopath, origGopath))
 	if err != nil {
@@ -276,7 +291,7 @@ func (me *SiteBuilder) compileSources() error {
 	return nil
 }
 
-func (me *SiteBuilder) formatOneSource(sourceFile string) error {
+func (me *siteBuilder) formatOneSource(sourceFile string) error {
 	origGopath := os.Getenv("GOPATH")
 	err := os.Setenv("GOPATH", me.OutputGopath)
 	if err != nil {
@@ -297,7 +312,7 @@ func (me *SiteBuilder) formatOneSource(sourceFile string) error {
 	return nil
 }
 
-func (me *SiteBuilder) formatSources() error {
+func (me *siteBuilder) formatSources() error {
 	sources, err := me.sourcesList()
 	if err != nil {
 		return err
@@ -313,11 +328,11 @@ func (me *SiteBuilder) formatSources() error {
 	return nil
 }
 
-func (me *SiteBuilder) sourcesList() ([]string, error) {
+func (me *siteBuilder) sourcesList() ([]string, error) {
 	return filepath.Glob(path.Join(me.packagePath, "*.go"))
 }
 
-func (me *SiteBuilder) Build() error {
+func (me *siteBuilder) Build() error {
 	err := me.writeSources()
 	if err != nil {
 		return err

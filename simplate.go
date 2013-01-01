@@ -1,7 +1,6 @@
 package goaspen
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -34,28 +33,28 @@ var (
 	defaultRenderer = "#!go/text/template"
 )
 
-type Simplate struct {
+type simplate struct {
 	SiteRoot      string          `json:"-"`
 	Filename      string          `json:"-"`
 	Type          string          `json:"type"`
 	ContentType   string          `json:"content_type"`
-	InitPage      *SimplatePage   `json:"-"`
-	LogicPage     *SimplatePage   `json:"-"`
-	TemplatePages []*SimplatePage `json:"-"`
+	InitPage      *simplatePage   `json:"-"`
+	LogicPage     *simplatePage   `json:"-"`
+	TemplatePages []*simplatePage `json:"-"`
 }
 
-type SimplatePage struct {
-	Parent *Simplate
+type simplatePage struct {
+	Parent *simplate
 	Body   string
-	Spec   *SimplatePageSpec
+	Spec   *simplatePageSpec
 }
 
-type SimplatePageSpec struct {
+type simplatePageSpec struct {
 	ContentType string
 	Renderer    string
 }
 
-func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error) {
+func NewSimplateFromString(siteRoot, filename, content string) (*simplate, error) {
 	var err error
 
 	filename, err = filepath.Abs(filename)
@@ -71,7 +70,7 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 	rawPages := strings.Split(content, "")
 	nbreaks := len(rawPages) - 1
 
-	s := &Simplate{
+	s := &simplate{
 		SiteRoot:    siteRoot,
 		Filename:    filename,
 		Type:        SimplateTypeStatic,
@@ -131,7 +130,7 @@ func NewSimplateFromString(siteRoot, filename, content string) (*Simplate, error
 	return s, nil
 }
 
-func (me *Simplate) FirstTemplatePage() *SimplatePage {
+func (me *simplate) FirstTemplatePage() *simplatePage {
 	if len(me.TemplatePages) > 0 {
 		return me.TemplatePages[0]
 	}
@@ -139,13 +138,13 @@ func (me *Simplate) FirstTemplatePage() *SimplatePage {
 	return nil
 }
 
-func (me *Simplate) Execute(wr io.Writer) (err error) {
+func (me *simplate) Execute(wr io.Writer) (err error) {
 	errAddr := &err
 
 	defer func(err *error) {
 		r := recover()
 		if r != nil {
-			*err = errors.New(fmt.Sprintf("%v", r))
+			*err = fmt.Errorf("%v", r)
 		}
 	}(errAddr)
 
@@ -154,14 +153,14 @@ func (me *Simplate) Execute(wr io.Writer) (err error) {
 	return
 }
 
-func (me *Simplate) escapedFilename() string {
+func (me *simplate) escapedFilename() string {
 	fn := filepath.Clean(me.Filename)
 	lessDots := strings.Replace(fn, ".", "-DOT-", -1)
 	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
 	return strings.Replace(lessSlashes, " ", "-SPACE-", -1)
 }
 
-func (me *Simplate) OutputName() string {
+func (me *simplate) OutputName() string {
 	if me.Type == SimplateTypeStatic {
 		return me.Filename
 	}
@@ -169,7 +168,7 @@ func (me *Simplate) OutputName() string {
 	return me.escapedFilename() + ".go"
 }
 
-func (me *Simplate) FuncName() string {
+func (me *simplate) FuncName() string {
 	escaped := me.escapedFilename()
 	parts := strings.Split(escaped, "-")
 	for i, part := range parts {
@@ -182,21 +181,21 @@ func (me *Simplate) FuncName() string {
 	return strings.Join(parts, "")
 }
 
-func (me *Simplate) ConstName() string {
+func (me *simplate) ConstName() string {
 	escaped := me.escapedFilename()
 	uppered := strings.ToUpper(escaped)
 	return strings.Replace(uppered, "-", "_", -1)
 }
 
-func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec, error) {
-	sps := &SimplatePageSpec{
+func NewSimplatePageSpec(simplate *simplate, specline string) (*simplatePageSpec, error) {
+	sps := &simplatePageSpec{
 		ContentType: simplate.ContentType,
 		Renderer:    defaultRenderer,
 	}
 
 	switch simplate.Type {
 	case SimplateTypeStatic:
-		return &SimplatePageSpec{}, nil
+		return &simplatePageSpec{}, nil
 	case SimplateTypeJson:
 		return sps, nil
 	case SimplateTypeRendered:
@@ -212,9 +211,9 @@ func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec
 		nParts := len(parts)
 
 		if nParts < 1 || nParts > 2 {
-			return nil, errors.New(fmt.Sprintf("A negotiated resource specline "+
+			return nil, fmt.Errorf("A negotiated resource specline "+
 				"must have one or two parts: #!renderer media/type. Yours is %q",
-				specline))
+				specline)
 		}
 
 		if nParts == 1 {
@@ -228,12 +227,12 @@ func NewSimplatePageSpec(simplate *Simplate, specline string) (*SimplatePageSpec
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("Can't make a page spec "+
-		"for simplate type %q", simplate.Type))
+	return nil, fmt.Errorf("Can't make a page spec "+
+		"for simplate type %q", simplate.Type)
 }
 
-func NewSimplatePage(simplate *Simplate, rawPage string, needsSpec bool) (*SimplatePage, error) {
-	spec := &SimplatePageSpec{}
+func NewSimplatePage(simplate *simplate, rawPage string, needsSpec bool) (*simplatePage, error) {
+	spec := &simplatePageSpec{}
 	var err error
 
 	specline := ""
@@ -251,7 +250,7 @@ func NewSimplatePage(simplate *Simplate, rawPage string, needsSpec bool) (*Simpl
 		}
 	}
 
-	sp := &SimplatePage{
+	sp := &simplatePage{
 		Parent: simplate,
 		Body:   body,
 		Spec:   spec,
