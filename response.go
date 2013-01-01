@@ -11,12 +11,16 @@ import (
 )
 
 var (
-	ErrHTTP406 = errors.New("406: No acceptable media type available")
+	http406 = newErrHttp406()
 	//DefaultCharsetDynamic = "utf-8"
 
 	defaultAcceptHeader = "text/html,application/xhtml+xml," +
 		"application/xml;q=0.9,*/*;q=0.8"
 )
+
+type errorHttp406 struct {
+	msg string
+}
 
 type HTTPResponseWrapper struct {
 	w   http.ResponseWriter
@@ -31,6 +35,16 @@ type HTTPResponseWrapper struct {
 	handledContentTypes []string
 
 	err error
+}
+
+func newErrHttp406() *errorHttp406 {
+	return &errorHttp406{
+		msg: "406: No acceptable media type available",
+	}
+}
+
+func (me *errorHttp406) Error() string {
+	return me.msg
 }
 
 func NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPResponseWrapper {
@@ -98,7 +112,7 @@ func (me *HTTPResponseWrapper) respond406(err error) {
 
 func (me *HTTPResponseWrapper) Respond() {
 	if me.err != nil {
-		if strings.HasPrefix(me.err.Error(), "406:") {
+		if _, ok := me.err.(*errorHttp406); ok {
 			me.respond406(me.err)
 			return
 		}
@@ -147,7 +161,7 @@ func (me *HTTPResponseWrapper) NegotiateAndCallHandler() {
 
 	negotiated := goautoneg.Negotiate(accept, me.handledContentTypes)
 	if len(negotiated) == 0 {
-		me.err = ErrHTTP406
+		me.err = http406
 		return
 	}
 
