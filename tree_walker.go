@@ -15,7 +15,7 @@ type treeWalker struct {
 	Root string
 }
 
-func NewTreeWalker(rootDir string) (*treeWalker, error) {
+func newTreeWalker(rootDir string) (*treeWalker, error) {
 	fi, err := os.Stat(rootDir)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (me *treeWalker) Simplates() (<-chan *simplate, error) {
 					return err
 				}
 
-				smplt, err := NewSimplateFromString(me.Root, path, string(content))
+				smplt, err := newSimplateFromString(me.Root, path, string(content))
 				if err != nil {
 					return err
 				}

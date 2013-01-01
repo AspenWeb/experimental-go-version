@@ -54,7 +54,7 @@ type simplatePageSpec struct {
 	Renderer    string
 }
 
-func NewSimplateFromString(siteRoot, filename, content string) (*simplate, error) {
+func newSimplateFromString(siteRoot, filename, content string) (*simplate, error) {
 	var err error
 
 	filename, err = filepath.Abs(filename)
@@ -78,12 +78,12 @@ func NewSimplateFromString(siteRoot, filename, content string) (*simplate, error
 	}
 
 	if nbreaks == 1 || nbreaks == 2 {
-		s.InitPage, err = NewSimplatePage(s, rawPages[0], false)
+		s.InitPage, err = newSimplatePage(s, rawPages[0], false)
 		if err != nil {
 			return nil, err
 		}
 
-		s.LogicPage, err = NewSimplatePage(s, rawPages[1], false)
+		s.LogicPage, err = newSimplatePage(s, rawPages[1], false)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func NewSimplateFromString(siteRoot, filename, content string) (*simplate, error
 			s.Type = SimplateTypeJson
 		} else {
 			s.Type = SimplateTypeRendered
-			templatePage, err := NewSimplatePage(s, rawPages[2], true)
+			templatePage, err := newSimplatePage(s, rawPages[2], true)
 			if err != nil {
 				return nil, err
 			}
@@ -105,18 +105,18 @@ func NewSimplateFromString(siteRoot, filename, content string) (*simplate, error
 
 	if nbreaks > 2 {
 		s.Type = SimplateTypeNegotiated
-		s.InitPage, err = NewSimplatePage(s, rawPages[0], false)
+		s.InitPage, err = newSimplatePage(s, rawPages[0], false)
 		if err != nil {
 			return nil, err
 		}
 
-		s.LogicPage, err = NewSimplatePage(s, rawPages[1], false)
+		s.LogicPage, err = newSimplatePage(s, rawPages[1], false)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, rawPage := range rawPages[2:] {
-			templatePage, err := NewSimplatePage(s, rawPage, true)
+			templatePage, err := newSimplatePage(s, rawPage, true)
 			if err != nil {
 				return nil, err
 			}
@@ -187,7 +187,7 @@ func (me *simplate) ConstName() string {
 	return strings.Replace(uppered, "-", "_", -1)
 }
 
-func NewSimplatePageSpec(simplate *simplate, specline string) (*simplatePageSpec, error) {
+func newSimplatePageSpec(simplate *simplate, specline string) (*simplatePageSpec, error) {
 	sps := &simplatePageSpec{
 		ContentType: simplate.ContentType,
 		Renderer:    defaultRenderer,
@@ -231,7 +231,7 @@ func NewSimplatePageSpec(simplate *simplate, specline string) (*simplatePageSpec
 		"for simplate type %q", simplate.Type)
 }
 
-func NewSimplatePage(simplate *simplate, rawPage string, needsSpec bool) (*simplatePage, error) {
+func newSimplatePage(simplate *simplate, rawPage string, needsSpec bool) (*simplatePage, error) {
 	spec := &simplatePageSpec{}
 	var err error
 
@@ -243,7 +243,7 @@ func NewSimplatePage(simplate *simplate, rawPage string, needsSpec bool) (*simpl
 		specline = parts[0]
 		body = parts[1]
 
-		spec, err = NewSimplatePageSpec(simplate,
+		spec, err = newSimplatePageSpec(simplate,
 			strings.TrimSpace(strings.Replace(specline, "", "", -1)))
 		if err != nil {
 			return nil, err

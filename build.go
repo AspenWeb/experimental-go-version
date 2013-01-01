@@ -71,7 +71,7 @@ func init() {
 	*defaultOutDirAddr = strings.Split(os.Getenv("GOPATH"), ":")[0]
 }
 
-func NewSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
+func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 	var (
 		err   error
 		goexe string
@@ -115,7 +115,7 @@ func NewSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		}
 	}
 
-	walker, err := NewTreeWalker(rootDir)
+	walker, err := newTreeWalker(rootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +356,7 @@ func (me *siteBuilder) Build() error {
 }
 
 func BuildMain(cfg *SiteBuilderCfg) int {
-	builder, err := NewSiteBuilder(cfg)
+	builder, err := newSiteBuilder(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 1

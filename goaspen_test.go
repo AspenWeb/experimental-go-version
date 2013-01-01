@@ -1,4 +1,4 @@
-package goaspen_test
+package goaspen
 
 import (
 	"bytes"
@@ -17,8 +17,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	. "github.com/meatballhat/goaspen"
 )
 
 const (
@@ -166,7 +164,7 @@ func mkTestSite() string {
 }
 
 func writeRenderedTemplate() (string, error) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		return "", err
 	}
@@ -217,7 +215,7 @@ func buildGoAspenGen() error {
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
+	s, err := newSimplateFromString("/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
 	if err != nil {
 		t.Error(err)
 		return
@@ -230,7 +228,7 @@ func TestSimplateKnowsItsFilename(t *testing.T) {
 }
 
 func TestSimplateKnowsItsContentType(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
+	s, err := newSimplateFromString("/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
 	if err != nil {
 		t.Error(err)
 		return
@@ -245,7 +243,7 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 }
 
 func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/nothing.txt", "foo\nham\n")
+	s, err := newSimplateFromString("/tmp", "/tmp/nothing.txt", "foo\nham\n")
 	if err != nil {
 		t.Error(err)
 		return
@@ -257,7 +255,7 @@ func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -269,7 +267,7 @@ func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestDetectsRenderedSimplate(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -281,7 +279,7 @@ func TestDetectsRenderedSimplate(t *testing.T) {
 }
 
 func TestDetectsStaticSimplate(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -293,7 +291,7 @@ func TestDetectsStaticSimplate(t *testing.T) {
 }
 
 func TestDetectsJSONSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -305,7 +303,7 @@ func TestDetectsJSONSimplates(t *testing.T) {
 }
 
 func TestDetectsNegotiatedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/hork", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/hork", BASIC_NEGOTIATED_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -318,7 +316,7 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-static.txt", BASIC_STATIC_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -334,7 +332,7 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -346,7 +344,7 @@ func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -358,7 +356,7 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -370,7 +368,7 @@ func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -382,7 +380,7 @@ func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -394,7 +392,7 @@ func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic.json", BASIC_JSON_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -406,7 +404,7 @@ func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -418,7 +416,7 @@ func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-negotiated.txt", BASIC_NEGOTIATED_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -430,7 +428,7 @@ func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
-	s, err := NewSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
+	s, err := newSimplateFromString("/tmp", "/tmp/basic-rendered.txt", BASIC_RENDERED_TXT_SIMPLATE)
 	if err != nil {
 		t.Error(err)
 		return
@@ -493,7 +491,7 @@ func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 }
 
 func TestTreeWalkerRequiresValidDirectoryRoot(t *testing.T) {
-	_, err := NewTreeWalker("/dev/null")
+	_, err := newTreeWalker("/dev/null")
 	if err == nil {
 		t.Errorf("New tree walker failed to reject invalid dir!")
 		return
@@ -508,7 +506,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	tw, err := NewTreeWalker(siteRoot)
+	tw, err := newTreeWalker(siteRoot)
 	if err != nil {
 		t.Error(err)
 		return
@@ -535,7 +533,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 }
 
 func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
-	_, err := NewSiteBuilder(&SiteBuilderCfg{
+	_, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       "/dev/null",
 		OutputGopath:  ".",
 		GenServerBind: ":9182",
@@ -546,7 +544,7 @@ func TestNewSiteBuilderRequiresValidRootDir(t *testing.T) {
 }
 
 func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
-	_, err := NewSiteBuilder(&SiteBuilderCfg{
+	_, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       ".",
 		OutputGopath:  "/dev/null",
 		GenServerBind: ":9182",
@@ -557,7 +555,7 @@ func TestNewSiteBuilderRequiresValidOutputDir(t *testing.T) {
 }
 
 func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       ".",
 		OutputGopath:  ".",
 		GenServerBind: ":9182",
@@ -580,7 +578,7 @@ func TestSiteBuilderExposesRootDir(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       testSiteRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
@@ -606,7 +604,7 @@ func TestSiteBuilderExposesOutputDir(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       testSiteRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
@@ -632,7 +630,7 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       testSiteRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
@@ -669,7 +667,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       testSiteRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
@@ -747,7 +745,7 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	sb, err := NewSiteBuilder(&SiteBuilderCfg{
+	sb, err := newSiteBuilder(&SiteBuilderCfg{
 		RootDir:       testSiteRoot,
 		OutputGopath:  tmpdir,
 		GenServerBind: ":9182",
