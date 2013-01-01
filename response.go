@@ -11,9 +11,7 @@ import (
 )
 
 var (
-	http406               = newErrHttp406()
-	DefaultCharsetDynamic = "utf-8"
-	DefaultCharsetStatic  = DefaultCharsetDynamic
+	http406 = newErrHttp406()
 
 	defaultAcceptHeader = "text/html,application/xhtml+xml," +
 		"application/xml;q=0.9,*/*;q=0.8"

@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,7 +45,7 @@ func init() {
 	*usageInfoAddr = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
-func changeMonitor(wwwRoot string, q chan bool) error {
+func watchForChanges(wwwRoot string, q chan bool) error {
 	watcher, err := inotify.NewWatcher()
 	if err != nil {
 		return err
@@ -86,6 +87,8 @@ func main() {
 	changesReload := false
 	charsetDynamic := goaspen.DefaultCharsetDynamic
 	charsetStatic := goaspen.DefaultCharsetStatic
+	indices := goaspen.DefaultIndices
+	argIndices := goaspen.DefaultIndices
 	compile := true
 	//configFiles := []string{}
 	debug := false
@@ -103,9 +106,10 @@ func main() {
 
 	optarg.Header("Serving Options")
 	goaspen.AddCommonServingOptions(genServerBind,
-		wwwRoot, charsetDynamic, charsetStatic, debug)
+		wwwRoot, charsetDynamic, charsetStatic, indices, debug)
 	optarg.Add("s", "run_server",
 		"Start server once compiled (implies `-C`)", runServer)
+
 	// TODO
 	//optarg.Header("General Configuration Options")
 	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
@@ -115,6 +119,7 @@ func main() {
 	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
 	//"most of goaspen's internal logging, 2 will suppress all it",
 	//loggingThreshold)
+
 	optarg.Header("Source Generation & Compiling Options")
 	optarg.Add("P", "package_name", "Generated source package name", genPkg)
 	optarg.Add("o", "output_path",
@@ -159,12 +164,29 @@ func main() {
 			charsetDynamic = opt.String()
 		case "charset_static":
 			charsetStatic = opt.String()
+		case "indices":
+			argIndices = opt.String()
 		}
 	}
 
 	goaspen.SetDebug(debug)
 
 	retcode := 0
+
+	indicesArray := []string{}
+	if strings.HasPrefix(argIndices, "+") {
+		for _, part := range strings.Split(indices, ",") {
+			indicesArray = append(indicesArray, strings.TrimSpace(part))
+		}
+
+		argIndices = strings.TrimLeft(argIndices, "+")
+	}
+
+	for _, part := range strings.Split(argIndices, ",") {
+		indicesArray = append(indicesArray, strings.TrimSpace(part))
+	}
+
+	log.Printf("Passing in indices of %v", indicesArray)
 
 	for {
 		retcode = goaspen.BuildMain(&goaspen.SiteBuilderCfg{
@@ -178,6 +200,7 @@ func main() {
 
 			CharsetDynamic: charsetDynamic,
 			CharsetStatic:  charsetStatic,
+			Indices:        indicesArray,
 		})
 
 		if !runServer {
@@ -233,7 +256,7 @@ func main() {
 		}(retChan, quitChan)
 
 		if changesReload {
-			go changeMonitor(wwwRoot, quitChan)
+			go watchForChanges(wwwRoot, quitChan)
 		} else {
 			quitChan <- false
 		}

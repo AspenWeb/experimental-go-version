@@ -73,14 +73,21 @@ func (me *directoryHandler) AddGlob(pathGlob string,
 }
 
 func (me *directoryHandler) serveStatic(w http.ResponseWriter, req *http.Request) error {
-	fullPath := path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
-	debugf("Calculated full path %q from root %q and request path %q",
+	fullPath, err := me.findStaticPath(req)
+	if err != nil {
+		return err
+	}
+
+	debugf("Found static path path %q from root %q and request path %q",
 		fullPath, me.WwwRoot, req.URL.Path)
 
 	fi, err := os.Stat(fullPath)
 	if err != nil {
-		debugf("Could not stat %q", fullPath)
 		return err
+	}
+
+	if fi.IsDir() {
+		return fmt.Errorf("Cannot serve directory at %q", fullPath)
 	}
 
 	ctype := mime.TypeByExtension(path.Ext(fullPath))
@@ -102,6 +109,38 @@ func (me *directoryHandler) serveStatic(w http.ResponseWriter, req *http.Request
 	io.Copy(w, outf)
 
 	return nil
+}
+
+func (me *directoryHandler) findStaticPath(req *http.Request) (string, error) {
+	fullPath := path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+
+	fi, err := os.Stat(fullPath)
+	if _, ok := err.(*os.PathError); ok || fi.IsDir() {
+		debugf("Either could not stat or is dir %q", fullPath)
+		debugf("Looking for candidate index files.  Configured indices = %+v",
+			me.app.Indices)
+
+		for _, idx := range me.app.Indices {
+			if len(idx) == 0 {
+				continue
+			}
+
+			tryFullPath := path.Join(fullPath, idx)
+
+			debugf("Checking for candidate index file at %q", tryFullPath)
+			fi, err := os.Stat(tryFullPath)
+			if err != nil || fi.IsDir() {
+				continue
+			}
+
+			debugf("Found candidate index file at %q", tryFullPath)
+			return tryFullPath, nil
+		}
+
+		return "", err
+	}
+
+	return fullPath, nil
 }
 
 func (me *directoryHandler) updateNegType(req *http.Request, filename string) {

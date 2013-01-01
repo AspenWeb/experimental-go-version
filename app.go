@@ -9,6 +9,10 @@ import (
 )
 
 var (
+	DefaultCharsetDynamic = "utf-8"
+	DefaultCharsetStatic  = DefaultCharsetDynamic
+	DefaultIndices        = "index.html, index.txt, index.json"
+
 	apps = map[string]*App{}
 )
 
@@ -18,6 +22,7 @@ type App struct {
 
 	CharsetDynamic string
 	CharsetStatic  string
+	Indices        []string
 
 	server                   *serverContext
 	handlerFuncRegistrations map[string]*handlerFuncRegistration
@@ -31,7 +36,9 @@ func DeclareApp(packageName string) *App {
 	}
 
 	newApp := &App{
-		PackageName:              packageName,
+		PackageName: packageName,
+		Indices:     []string{},
+
 		handlerFuncRegistrations: map[string]*handlerFuncRegistration{},
 	}
 	apps[packageName] = newApp
@@ -189,12 +196,18 @@ func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 	return nil
 }
 
-func (me *App) Configure(serverBind,
-	wwwRoot, charsetDynamic, charsetStatic string, debug bool) {
+func (me *App) Configure(serverBind, wwwRoot, charsetDynamic,
+	charsetStatic, indices string, debug bool) {
+
+	debugf("app.Configure(%q, %q, %q, %q, %q, %v)", serverBind, wwwRoot,
+		charsetDynamic, charsetStatic, indices, debug)
 
 	me.WwwRoot = wwwRoot
 	me.CharsetDynamic = charsetDynamic
 	me.CharsetStatic = charsetStatic
+	for _, part := range strings.Split(indices, ",") {
+		me.Indices = append(me.Indices, strings.TrimSpace(part))
+	}
 
 	if me.server == nil {
 		me.server = newServerContext(me,
