@@ -77,7 +77,7 @@ func (me *HTTPResponseWrapper) SetError(err error) {
 	me.err = err
 }
 
-func (me *HTTPResponseWrapper) Respond500(err error) {
+func (me *HTTPResponseWrapper) respond500(err error) {
 	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
@@ -86,7 +86,7 @@ func (me *HTTPResponseWrapper) Respond500(err error) {
 	me.w.Write(http500Response)
 }
 
-func (me *HTTPResponseWrapper) Respond406(err error) {
+func (me *HTTPResponseWrapper) respond406(err error) {
 	me.w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
@@ -99,11 +99,11 @@ func (me *HTTPResponseWrapper) Respond406(err error) {
 func (me *HTTPResponseWrapper) Respond() {
 	if me.err != nil {
 		if strings.HasPrefix(me.err.Error(), "406:") {
-			me.Respond406(me.err)
+			me.respond406(me.err)
 			return
 		}
 
-		me.Respond500(me.err)
+		me.respond500(me.err)
 		return
 	}
 
@@ -114,13 +114,13 @@ func (me *HTTPResponseWrapper) Respond() {
 
 func (me *HTTPResponseWrapper) RespondJSON() {
 	if me.bodyObj == nil {
-		me.Respond500(errors.New("JSON response body not set!"))
+		me.respond500(errors.New("JSON response body not set!"))
 		return
 	}
 
 	jsonBody, err := json.Marshal(me.bodyObj)
 	if err != nil {
-		me.Respond500(err)
+		me.respond500(err)
 		return
 	}
 
