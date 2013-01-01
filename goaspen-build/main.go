@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/jteeuwen/go-pkg-optarg"
 	"github.com/kless/go-exp/inotify"
@@ -191,16 +192,39 @@ func main() {
 				"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%v", debug))
 			srvCmd.Stdout = os.Stdout
 			srvCmd.Stderr = os.Stderr
-			srvCmd.Start()
 
-			if <-q {
-				srvCmd.Process.Signal(syscall.SIGQUIT)
-			}
+			cmdErr := make(chan error)
 
-			err = srvCmd.Wait()
-			if _, ok := err.(*exec.ExitError); ok {
-				ret <- 9
-				return
+			go func() {
+				cmdErr <- srvCmd.Run()
+			}()
+
+			defer func() {
+				time.Sleep(3000 * time.Millisecond)
+				srvCmd.Process.Kill()
+			}()
+
+			for {
+				keepLooping := true
+				select {
+				case <-q:
+					srvCmd.Process.Signal(syscall.SIGQUIT)
+					keepLooping = false
+					break
+				case err := <-cmdErr:
+					if _, ok := err.(*exec.ExitError); ok {
+						ret <- 9
+						return
+					}
+					keepLooping = false
+					break
+				default:
+					time.Sleep(1000 * time.Millisecond)
+				}
+
+				if !keepLooping {
+					break
+				}
 			}
 
 			ret <- 0
