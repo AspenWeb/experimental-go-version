@@ -1,4 +1,4 @@
-GOASPEN_BUILD_OPTS := -w docroot -P goaspen_smoke_test -x -s --changes_reload
+GOASPEN_BUILD_OPTS := -w docroot -P goaspen_smoke_test --indices +default.htm -x -s --changes_reload
 
 smoke:
 	GOPATH=./:$(GOPATH) goaspen-build $(GOASPEN_BUILD_OPTS)
