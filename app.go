@@ -23,6 +23,7 @@ type App struct {
 	CharsetDynamic string
 	CharsetStatic  string
 	Indices        []string
+	ListDirs       bool
 
 	server                   *serverContext
 	handlerFuncRegistrations map[string]*handlerFuncRegistration
@@ -197,14 +198,16 @@ func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 }
 
 func (me *App) Configure(serverBind, wwwRoot, charsetDynamic,
-	charsetStatic, indices string, debug bool) {
+	charsetStatic, indices string, debug, listDirs bool) {
 
-	debugf("app.Configure(%q, %q, %q, %q, %q, %v)", serverBind, wwwRoot,
-		charsetDynamic, charsetStatic, indices, debug)
+	debugf("app.Configure(%q, %q, %q, %q, %q, %v, %v)", serverBind, wwwRoot,
+		charsetDynamic, charsetStatic, indices, debug, listDirs)
 
 	me.WwwRoot = wwwRoot
 	me.CharsetDynamic = charsetDynamic
 	me.CharsetStatic = charsetStatic
+	me.ListDirs = listDirs
+
 	for _, part := range strings.Split(indices, ",") {
 		me.Indices = append(me.Indices, strings.TrimSpace(part))
 	}

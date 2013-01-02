@@ -1,8 +1,10 @@
 package goaspen
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
@@ -12,6 +14,7 @@ import (
 
 const (
 	internalAcceptHeader = "X-GoAspen-Accept"
+	pathTransHeader      = "X-HTTP-Path-Translated"
 )
 
 type handlerFuncRegistration struct {
@@ -30,9 +33,27 @@ type directoryHandler struct {
 	app *App
 }
 
+type directoryListing struct {
+	RequestPath string
+	FullPath    string
+	Entries     []*directoryListingEntry
+}
+
+type directoryListingEntry struct {
+	RequestPath string
+	FileInfo    os.FileInfo
+}
+
+type serveDirError struct {
+	Path string
+}
+
 func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	debugf("Handling directory response for %q", req.URL.Path)
 	me.updateNegType(req, req.URL.Path)
+
+	fullPath := path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+	req.Header.Set(pathTransHeader, fullPath)
 
 	for requestUri, handler := range me.PatternHandlers {
 		matched, err := path.Match(requestUri, req.URL.Path)
@@ -49,19 +70,30 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err := me.serveStatic(w, req)
-	if err != nil {
-		if strings.HasSuffix(req.URL.Path, "/favicon.ico") {
-			w.Header().Set("Content-Type", "image/x-icon")
-			w.WriteHeader(http.StatusOK)
-			w.Write(faviconIco)
+	if err == nil {
+		return
+	}
+
+	debugf("Serving static failed, so checking if directory listing is appropriate")
+
+	if _, ok := err.(*serveDirError); ok && me.app.ListDirs {
+		err = me.serveDirListing(w, req)
+		if err == nil {
 			return
 		}
-
-		w.Header().Set("Content-Type",
-			fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
-		w.WriteHeader(http.StatusNotFound)
-		w.Write(http404Response)
 	}
+
+	if strings.HasSuffix(req.URL.Path, "/favicon.ico") {
+		w.Header().Set("Content-Type", "image/x-icon")
+		w.WriteHeader(http.StatusOK)
+		w.Write(faviconIco)
+		return
+	}
+
+	w.Header().Set("Content-Type",
+		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+	w.WriteHeader(http.StatusNotFound)
+	w.Write(http404Response)
 }
 
 func (me *directoryHandler) AddGlob(pathGlob string,
@@ -78,7 +110,7 @@ func (me *directoryHandler) serveStatic(w http.ResponseWriter, req *http.Request
 		return err
 	}
 
-	debugf("Found static path path %q from root %q and request path %q",
+	debugf("Found static path %q from root %q and request path %q",
 		fullPath, me.WwwRoot, req.URL.Path)
 
 	fi, err := os.Stat(fullPath)
@@ -87,7 +119,7 @@ func (me *directoryHandler) serveStatic(w http.ResponseWriter, req *http.Request
 	}
 
 	if fi.IsDir() {
-		return fmt.Errorf("Cannot serve directory at %q", fullPath)
+		return &serveDirError{Path: fullPath}
 	}
 
 	ctype := mime.TypeByExtension(path.Ext(fullPath))
@@ -111,8 +143,49 @@ func (me *directoryHandler) serveStatic(w http.ResponseWriter, req *http.Request
 	return nil
 }
 
+func (me *directoryHandler) serveDirListing(w http.ResponseWriter,
+	req *http.Request) error {
+
+	debugf("Serving directory listing for %q", req.URL.Path)
+
+	fullPath := req.Header.Get(pathTransHeader)
+	if len(fullPath) == 0 {
+		fullPath = path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+	}
+
+	fi, err := os.Stat(fullPath)
+	if err != nil {
+		return err
+	}
+
+	if !fi.IsDir() {
+		return fmt.Errorf("%q is not a directory!", fullPath)
+	}
+
+	dirListing, err := newDirListing(req.URL.Path, fullPath)
+	if err != nil {
+		return err
+	}
+
+	htmlListing, err := dirListing.Html()
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%v", len(htmlListing)))
+	w.Header().Set("Content-Type",
+		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+	w.WriteHeader(http.StatusOK)
+	w.Write(htmlListing)
+
+	return nil
+}
+
 func (me *directoryHandler) findStaticPath(req *http.Request) (string, error) {
-	fullPath := path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+	fullPath := req.Header.Get(pathTransHeader)
+	if len(fullPath) == 0 {
+		fullPath = path.Join(me.WwwRoot, strings.TrimLeft(req.URL.Path, "/"))
+	}
 
 	fi, err := os.Stat(fullPath)
 	if _, ok := err.(*os.PathError); ok || fi.IsDir() {
@@ -136,8 +209,6 @@ func (me *directoryHandler) findStaticPath(req *http.Request) (string, error) {
 			debugf("Found candidate index file at %q", tryFullPath)
 			return tryFullPath, nil
 		}
-
-		return "", err
 	}
 
 	return fullPath, nil
@@ -150,4 +221,51 @@ func (me *directoryHandler) updateNegType(req *http.Request, filename string) {
 	}
 
 	req.Header.Set(internalAcceptHeader, mediaType)
+}
+
+func newDirListing(requestPath, dirPath string) (*directoryListing, error) {
+	entries, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	dlEntries := []*directoryListingEntry{}
+
+	for _, ent := range entries {
+		dlEnt := &directoryListingEntry{
+			RequestPath: path.Join(requestPath, ent.Name()),
+			FileInfo:    ent,
+		}
+
+		dlEntries = append(dlEntries, dlEnt)
+	}
+
+	dl := &directoryListing{
+		RequestPath: requestPath,
+		FullPath:    dirPath,
+		Entries:     dlEntries,
+	}
+	return dl, nil
+}
+
+func (me *directoryListing) Html() ([]byte, error) {
+	var buf bytes.Buffer
+	err := directoryListingTmpl.Execute(&buf, me)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (me *directoryListing) WebParentDir() string {
+	if me.RequestPath == "/" {
+		return "/"
+	}
+
+	return path.Dir(me.RequestPath)
+}
+
+func (me *serveDirError) Error() string {
+	return fmt.Sprintf("Directory %q cannot be served!", me.Path)
 }

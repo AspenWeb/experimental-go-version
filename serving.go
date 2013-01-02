@@ -22,7 +22,8 @@ type serverContext struct {
 }
 
 func AddCommonServingOptions(serverBind,
-	wwwRoot, charsetDynamic, charsetStatic, indices string, debug bool) {
+	wwwRoot, charsetDynamic, charsetStatic, indices string,
+	debug, listDirs bool) {
 
 	optarg.Add("w", "www_root",
 		"Filesystem path of the document publishing root", wwwRoot)
@@ -37,15 +38,17 @@ func AddCommonServingOptions(serverBind,
 		"look for when a directory is requested directly; prefix "+
 		"with + to extend previous configuration instead of overriding",
 		indices)
+	optarg.Add("", "list_directories", "if set to {true,1}, will serve "+
+		"a directory listing when no index is available", listDirs)
 }
 
 func RunServerMain(wwwRoot, serverBind, packageName,
-	charsetDynamic, charsetStatic, indices string) {
+	charsetDynamic, charsetStatic, indices string, listDirs bool) {
 
 	debug := false
 
 	AddCommonServingOptions(serverBind,
-		wwwRoot, charsetDynamic, charsetStatic, indices, debug)
+		wwwRoot, charsetDynamic, charsetStatic, indices, debug, listDirs)
 	for opt := range optarg.Parse() {
 		switch opt.Name {
 		case "network_address":
@@ -60,6 +63,8 @@ func RunServerMain(wwwRoot, serverBind, packageName,
 			charsetStatic = opt.String()
 		case "indices":
 			indices = opt.String()
+		case "list_directories":
+			listDirs = opt.Bool()
 		}
 	}
 
@@ -73,7 +78,7 @@ func RunServerMain(wwwRoot, serverBind, packageName,
 	debugf("Declaring app for package %q", packageName)
 	app := DeclareApp(packageName)
 	app.Configure(serverBind, wwwRoot, charsetDynamic, charsetStatic,
-		indices, debug)
+		indices, debug, listDirs)
 
 	err = app.RunServer()
 	if err != nil {

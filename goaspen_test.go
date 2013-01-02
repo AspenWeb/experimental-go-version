@@ -692,19 +692,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 
 	fileName := path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go")
 
-	fd, err := os.Open(fileName)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	fileContent, err := ioutil.ReadAll(fd)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = fd.Close()
+	fileContent, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		t.Error(err)
 		return
@@ -720,13 +708,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		return
 	}
 
-	fd, err = os.Open(fileName)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	fileContent, err = ioutil.ReadAll(fd)
+	fileContent, err = ioutil.ReadFile(fileName)
 	if err != nil {
 		t.Error(err)
 		return

@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"io/ioutil"
+	"text/template"
 )
 
 var (
@@ -68,6 +69,70 @@ var (
   </body>
 </html>
 `)
+	directoryListingTmpl = template.Must(template.New("directory-listing").Parse(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{.RequestPath}}</title>
+    <style type="text/css">
+      body {
+          font-family: monospace;
+      }
+
+      #directory_listing {
+          font-size: 12px;
+      }
+
+      td, th {
+          padding: 1px 5px;
+      }
+
+      .entry {
+          text-align: left;
+      }
+
+      .entry.name {
+          width: 200px;
+      }
+
+      .entry.mode {
+          width: 100px;
+      }
+
+      .entry.size {
+          width: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="request_path">{{.RequestPath}}</h1>
+    <hr />
+    <table id="directory_listing">
+      <thead>
+        <tr>
+          <th class="entry name">name</th>
+          <th class="entry mode">mode</th>
+          <th class="entry size">size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="entry name"><a href="{{.WebParentDir}}">..</a></td>
+          <td class="entry mode">-</td>
+          <td class="entry size">-</td>
+        </tr>
+        {{range .Entries}}
+        <tr>
+          <td class="entry name"><a href="{{.RequestPath}}">{{.FileInfo.Name}}</a></td>
+          <td class="entry mode">{{.FileInfo.Mode}}</td>
+          <td class="entry size">{{.FileInfo.Size}}B</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </body>
+</html>
+`))
 	faviconIcoGzBase64 = `
 H4sIAD3/4lAAA/t/4/8DBgEvN083BkZGRgYPIGT4/49B2LkoNbEkNUWhPLMkQ8Hd0zfg/20GZwZm
 JiYQAgIWIGLlYGVlYWHlYmdn4+Dh4uHh5uLm5uUTEuDlE+Tj5hYQExAUFhEVFeXhF5cQE5EQEhEV

@@ -37,7 +37,8 @@ into Go sources written to generated package (-p) in the output GOPATH base
 exist, or the '-m' flag may be passed to ensure it exists.
 `
 	usageInfo    = ""
-	changeEvents = inotify.IN_CREATE | inotify.IN_DELETE | inotify.IN_MODIFY | inotify.IN_MOVE
+	changeEvents = inotify.IN_CREATE | inotify.IN_DELETE |
+		inotify.IN_DELETE_SELF | inotify.IN_MODIFY | inotify.IN_MOVE
 )
 
 func init() {
@@ -84,21 +85,23 @@ func main() {
 		log.Fatal("Failed to get current working directory! ", err)
 	}
 
-	changesReload := false
-	charsetDynamic := goaspen.DefaultCharsetDynamic
-	charsetStatic := goaspen.DefaultCharsetStatic
-	indices := goaspen.DefaultIndices
-	argIndices := goaspen.DefaultIndices
 	compile := true
-	//configFiles := []string{}
-	debug := false
 	format := true
 	genPkg := goaspen.DefaultGenPackage
-	genServerBind := ":9182"
-	//loggingThreshold := 0
 	mkOutDir := false
 	outPath := goaspen.DefaultOutputGopath
+
+	changesReload := false
+	debug := false
+	genServerBind := ":9182"
+	listDirs := false
 	runServer := false
+
+	charsetDynamic := goaspen.DefaultCharsetDynamic
+	charsetStatic := goaspen.DefaultCharsetStatic
+
+	indices := goaspen.DefaultIndices
+	argIndices := goaspen.DefaultIndices
 
 	optarg.UsageInfo = usageInfo
 
@@ -106,21 +109,11 @@ func main() {
 
 	optarg.Header("Serving Options")
 	goaspen.AddCommonServingOptions(genServerBind,
-		wwwRoot, charsetDynamic, charsetStatic, indices, debug)
+		wwwRoot, charsetDynamic, charsetStatic, indices, debug, listDirs)
 	optarg.Add("s", "run_server",
 		"Start server once compiled (implies `-C`)", runServer)
 
-	// TODO
-	//optarg.Header("General Configuration Options")
-	//optarg.Add("f", "configuration_files", "Comma-separated list of paths "+
-	//"to configuration files in Go syntax that accept config JSON on "+
-	//"stdin and write config JSON to stdout.", configFiles)
-	// TODO
-	//optarg.Add("l", "logging_threshold", "a small integer; 1 will suppress "+
-	//"most of goaspen's internal logging, 2 will suppress all it",
-	//loggingThreshold)
-
-	optarg.Header("Source Generation & Compiling Options")
+	optarg.Header("Source Generation & Compile Options")
 	optarg.Add("P", "package_name", "Generated source package name", genPkg)
 	optarg.Add("o", "output_path",
 		"Output GOPATH base for generated sources", outPath)
@@ -166,6 +159,8 @@ func main() {
 			charsetStatic = opt.String()
 		case "indices":
 			argIndices = opt.String()
+		case "list_directories":
+			listDirs = opt.Bool()
 		}
 	}
 
@@ -201,6 +196,7 @@ func main() {
 			CharsetDynamic: charsetDynamic,
 			CharsetStatic:  charsetStatic,
 			Indices:        indicesArray,
+			ListDirs:       listDirs,
 		})
 
 		if !runServer {

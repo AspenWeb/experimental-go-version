@@ -54,14 +54,7 @@ func (me *treeWalker) Simplates() (<-chan *simplate, error) {
 					return nil
 				}
 
-				f, err := os.Open(path)
-				if err != nil {
-					return err
-				}
-
-				defer f.Close()
-
-				content, err := ioutil.ReadAll(f)
+				content, err := ioutil.ReadFile(path)
 				if err != nil {
 					return err
 				}

@@ -29,7 +29,7 @@ func main() {
     goaspen.RunServerMain("{{.WwwRoot}}",
         "{{.GenServerBind}}", "{{.GenPackage}}",
         "{{.CharsetDynamic}}", "{{.CharsetStatic}}",
-        "{{.IndicesString}}")
+        "{{.IndicesString}}", {{.ListDirs}})
 }
 `))
 )
@@ -42,6 +42,7 @@ type siteBuilder struct {
 	CharsetStatic  string
 	CharsetDynamic string
 	Indices        []string
+	ListDirs       bool
 
 	// used primarily for compile time
 	OutputGopath string
@@ -67,6 +68,7 @@ type SiteBuilderCfg struct {
 	CharsetStatic  string
 	CharsetDynamic string
 	Indices        []string
+	ListDirs       bool
 }
 
 type siteIndex struct {
@@ -144,6 +146,7 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		CharsetDynamic: cfg.CharsetDynamic,
 		CharsetStatic:  cfg.CharsetStatic,
 		Indices:        cfg.Indices,
+		ListDirs:       cfg.ListDirs,
 
 		goexe:       goexe,
 		walker:      walker,
