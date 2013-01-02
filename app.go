@@ -47,14 +47,6 @@ func DeclareApp(packageName string) *App {
 	return newApp
 }
 
-func LookupApp(packageName string) *App {
-	if app, ok := apps[packageName]; ok {
-		return app
-	}
-
-	panic(fmt.Errorf("There is no app registered for package %q!", packageName))
-}
-
 func (me *App) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPResponseWrapper {
 	return &HTTPResponseWrapper{
 		app: me,

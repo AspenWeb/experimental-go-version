@@ -38,7 +38,7 @@ var (
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
     var err error
-    app := goaspen.LookupApp("{{.GenPackage}}")
+    app := local{{.FuncName}}App
     ctx := make(map[string]interface{})
     response := app.NewHTTPResponseWrapper(w, req)
 
@@ -79,7 +79,7 @@ var (
 
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
     var err error
-    app := goaspen.LookupApp("{{.GenPackage}}")
+    app := local{{.FuncName}}App
     ctx := make(map[string]interface{})
     response := app.NewHTTPResponseWrapper(w, req)
 
