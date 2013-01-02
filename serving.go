@@ -18,7 +18,7 @@ type serverContext struct {
 	WwwRoot     string
 	Debug       bool
 
-	app *App
+	website *Website
 }
 
 func AddCommonServingOptions(serverBind,
@@ -76,17 +76,17 @@ func RunServerMain(wwwRoot, serverBind, packageName,
 	SetDebug(debug)
 
 	debugf("Declaring app for package %q", packageName)
-	app := DeclareApp(packageName)
-	app.Configure(serverBind, wwwRoot, charsetDynamic, charsetStatic,
+	website := DeclareWebsite(packageName)
+	website.Configure(serverBind, wwwRoot, charsetDynamic, charsetStatic,
 		indices, debug, listDirs)
 
-	err = app.RunServer()
+	err = website.RunServer()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func newServerContext(app *App, packageName, serverBind, wwwRoot string,
+func newServerContext(website *Website, packageName, serverBind, wwwRoot string,
 	debug bool) *serverContext {
 
 	return &serverContext{
@@ -95,7 +95,7 @@ func newServerContext(app *App, packageName, serverBind, wwwRoot string,
 		WwwRoot:     wwwRoot,
 		Debug:       debug,
 
-		app: app,
+		website: website,
 	}
 }
 

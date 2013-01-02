@@ -22,9 +22,9 @@ type errorHttp406 struct {
 }
 
 type HTTPResponseWrapper struct {
-	app *App
-	w   http.ResponseWriter
-	req *http.Request
+	website *Website
+	w       http.ResponseWriter
+	req     *http.Request
 
 	statusCode int
 	bodyBytes  []byte
@@ -54,7 +54,7 @@ func (me *HTTPResponseWrapper) SetContentType(contentType string) {
 	}
 
 	if strings.HasPrefix(contentType, "text/") && !strings.Contains(contentType, "charset=") {
-		contentType = fmt.Sprintf("%v; charset=%v", contentType, me.app.CharsetDynamic)
+		contentType = fmt.Sprintf("%v; charset=%v", contentType, me.website.CharsetDynamic)
 	}
 
 	me.contentType = contentType
@@ -78,7 +78,7 @@ func (me *HTTPResponseWrapper) SetError(err error) {
 
 func (me *HTTPResponseWrapper) respond500(err error) {
 	me.w.Header().Set("Content-Type",
-		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}
@@ -88,7 +88,7 @@ func (me *HTTPResponseWrapper) respond500(err error) {
 
 func (me *HTTPResponseWrapper) respond406(err error) {
 	me.w.Header().Set("Content-Type",
-		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	if isDebug {
 		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
 	}
@@ -156,5 +156,14 @@ func (me *HTTPResponseWrapper) NegotiateAndCallHandler() {
 	if ok {
 		debugf("Calling handler %v for negotiated content type %q", handlerFunc, negotiated)
 		handlerFunc(me)
+	}
+}
+
+func (me *HTTPResponseWrapper) DebugContext(filename string, ctx map[string]interface{}) {
+	if me.website.Debug {
+		debugf("%q final context: %+v", filename, ctx)
+		for key, value := range ctx {
+			debugf("%q final context (%q): %+v", filename, key, value)
+		}
 	}
 }

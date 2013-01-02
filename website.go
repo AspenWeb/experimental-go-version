@@ -11,12 +11,12 @@ import (
 var (
 	DefaultCharsetDynamic = "utf-8"
 	DefaultCharsetStatic  = DefaultCharsetDynamic
-	DefaultIndices        = "index.html, index.txt, index.json"
+	DefaultIndices        = "index.html,index.json,index.txt"
 
-	apps = map[string]*App{}
+	websites = map[string]*Website{}
 )
 
-type App struct {
+type Website struct {
 	PackageName string
 	WwwRoot     string
 
@@ -24,6 +24,7 @@ type App struct {
 	CharsetStatic  string
 	Indices        []string
 	ListDirs       bool
+	Debug          bool
 
 	server                   *serverContext
 	handlerFuncRegistrations map[string]*handlerFuncRegistration
@@ -31,27 +32,27 @@ type App struct {
 	configured               bool
 }
 
-func DeclareApp(packageName string) *App {
-	if app, ok := apps[packageName]; ok {
-		return app
+func DeclareWebsite(packageName string) *Website {
+	if website, ok := websites[packageName]; ok {
+		return website
 	}
 
-	newApp := &App{
+	newSite := &Website{
 		PackageName: packageName,
 		Indices:     []string{},
 
 		handlerFuncRegistrations: map[string]*handlerFuncRegistration{},
 	}
-	apps[packageName] = newApp
+	websites[packageName] = newSite
 
-	return newApp
+	return newSite
 }
 
-func (me *App) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPResponseWrapper {
+func (me *Website) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) *HTTPResponseWrapper {
 	return &HTTPResponseWrapper{
-		app: me,
-		w:   w,
-		req: req,
+		website: me,
+		w:       w,
+		req:     req,
 
 		statusCode: http.StatusOK,
 		bodyBytes:  []byte(""),
@@ -63,7 +64,7 @@ func (me *App) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (me *App) NewHandlerFuncRegistration(requestPath string,
+func (me *Website) NewHandlerFuncRegistration(requestPath string,
 	handler http.HandlerFunc) *handlerFuncRegistration {
 
 	if len(requestPath) < 1 {
@@ -78,7 +79,7 @@ func (me *App) NewHandlerFuncRegistration(requestPath string,
 		HandlerFunc: handler,
 		Receiver:    nil,
 
-		app: me,
+		website: me,
 	}
 
 	if !strings.HasSuffix(requestPath, "/") && len(path.Ext(requestPath)) == 0 {
@@ -88,14 +89,14 @@ func (me *App) NewHandlerFuncRegistration(requestPath string,
 			HandlerFunc: handler,
 			Receiver:    nil,
 
-			app: me,
+			website: me,
 		}
 	}
 
 	return me.handlerFuncRegistrations[requestPath]
 }
 
-func (me *App) expandAllHandlerFuncRegistrations() error {
+func (me *Website) expandAllHandlerFuncRegistrations() error {
 	debugf("Expanding all handler func registrations!")
 
 	for _, reg := range me.handlerFuncRegistrations {
@@ -108,7 +109,7 @@ func (me *App) expandAllHandlerFuncRegistrations() error {
 	return nil
 }
 
-func (me *App) expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
+func (me *Website) expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
 	if path.Ext(reg.RequestPath) == ".*" {
 		debugf("Found glob registration %q, adding to directory handler",
 			reg.RequestPath)
@@ -125,7 +126,7 @@ func (me *App) expandHandlerFuncRegistration(reg *handlerFuncRegistration) error
 	return nil
 }
 
-func (me *App) registerAllHandlerFuncs() error {
+func (me *Website) registerAllHandlerFuncs() error {
 	debugf("Registering all handler funcs!")
 
 	for _, reg := range me.handlerFuncRegistrations {
@@ -138,7 +139,7 @@ func (me *App) registerAllHandlerFuncs() error {
 	return nil
 }
 
-func (me *App) registerHandlerFunc(reg *handlerFuncRegistration) error {
+func (me *Website) registerHandlerFunc(reg *handlerFuncRegistration) error {
 	me.regLock.RLock()
 	defer me.regLock.RUnlock()
 
@@ -146,7 +147,7 @@ func (me *App) registerHandlerFunc(reg *handlerFuncRegistration) error {
 	return nil
 }
 
-func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
+func (me *Website) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 	handler func(http.ResponseWriter, *http.Request)) error {
 
 	var reg *handlerFuncRegistration
@@ -158,7 +159,7 @@ func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 			DirectoryPath:   dir,
 			PatternHandlers: map[string]*handlerFuncRegistration{},
 
-			app: me,
+			website: me,
 		}
 
 		reg = me.NewHandlerFuncRegistration(dir,
@@ -178,7 +179,7 @@ func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 		HandlerFunc: handler,
 		Receiver:    nil,
 
-		app: me,
+		website: me,
 	}
 
 	err := dirHandlerReg.Receiver.AddGlob(requestPath, globReg)
@@ -189,16 +190,17 @@ func (me *App) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 	return nil
 }
 
-func (me *App) Configure(serverBind, wwwRoot, charsetDynamic,
+func (me *Website) Configure(serverBind, wwwRoot, charsetDynamic,
 	charsetStatic, indices string, debug, listDirs bool) {
 
-	debugf("app.Configure(%q, %q, %q, %q, %q, %v, %v)", serverBind, wwwRoot,
+	debugf("website.Configure(%q, %q, %q, %q, %q, %v, %v)", serverBind, wwwRoot,
 		charsetDynamic, charsetStatic, indices, debug, listDirs)
 
 	me.WwwRoot = wwwRoot
 	me.CharsetDynamic = charsetDynamic
 	me.CharsetStatic = charsetStatic
 	me.ListDirs = listDirs
+	me.Debug = debug
 
 	for _, part := range strings.Split(indices, ",") {
 		me.Indices = append(me.Indices, strings.TrimSpace(part))
@@ -212,7 +214,7 @@ func (me *App) Configure(serverBind, wwwRoot, charsetDynamic,
 	me.configured = true
 }
 
-func (me *App) RunServer() error {
+func (me *Website) RunServer() error {
 	if !me.configured {
 		return fmt.Errorf("Can't run the server when we aren't configured!")
 	}

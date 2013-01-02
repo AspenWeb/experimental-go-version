@@ -22,7 +22,7 @@ type handlerFuncRegistration struct {
 	HandlerFunc http.HandlerFunc
 	Receiver    *directoryHandler
 
-	app *App
+	website *Website
 }
 
 type directoryHandler struct {
@@ -30,7 +30,7 @@ type directoryHandler struct {
 	DirectoryPath   string
 	PatternHandlers map[string]*handlerFuncRegistration
 
-	app *App
+	website *Website
 }
 
 type directoryListing struct {
@@ -77,7 +77,7 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 
 	debugf("Serving static failed, so checking if directory listing is appropriate")
 
-	if _, ok := err.(*serveDirError); ok && me.app.ListDirs {
+	if _, ok := err.(*serveDirError); ok && me.website.ListDirs {
 		err = me.serveDirListing(w, req)
 		if err == nil {
 			return
@@ -92,7 +92,7 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type",
-		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	w.WriteHeader(http.StatusNotFound)
 	w.Write(http404Response)
 }
@@ -175,7 +175,7 @@ func (me *directoryHandler) serveDirListing(w http.ResponseWriter,
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%v", len(htmlListing)))
 	w.Header().Set("Content-Type",
-		fmt.Sprintf("text/html; charset=%v", me.app.CharsetDynamic))
+		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	w.WriteHeader(http.StatusOK)
 	w.Write(htmlListing)
 
@@ -192,9 +192,9 @@ func (me *directoryHandler) findStaticPath(req *http.Request) (string, error) {
 	if _, ok := err.(*os.PathError); ok || fi.IsDir() {
 		debugf("Either could not stat or is dir %q", fullPath)
 		debugf("Looking for candidate index files.  Configured indices = %+v",
-			me.app.Indices)
+			me.website.Indices)
 
-		for _, idx := range me.app.Indices {
+		for _, idx := range me.website.Indices {
 			if len(idx) == 0 {
 				continue
 			}

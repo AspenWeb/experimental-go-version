@@ -18,7 +18,32 @@ import (
 )
 
 `
-	simplateTypeRenderedTmpl = `
+	simplateTmplWebFuncDeclaration = `
+    local{{.FuncName}}Website = goaspen.DeclareWebsite("{{.GenPackage}}")
+    _ = local{{.FuncName}}Website.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+`
+	simplateTmplFuncHeader = `
+func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, request *http.Request) {
+    var err error
+    website := local{{.FuncName}}Website
+
+    response := website.NewHTTPResponseWrapper(w, request)
+
+    __file__ := "{{.AbsFilename}}"
+    ctx := make(map[string]interface{})
+
+    {{.LogicPage.Body}}
+`
+	simplateTmplFuncFooter = `
+    response.NegotiateAndCallHandler()
+    if err != nil {
+        response.SetError(err)
+    }
+
+    response.DebugContext(__file__, ctx)
+`
+
+	simplateTypeRenderedTmpl = simplateTmplCommonHeader + `
 import (
     "bytes"
     "text/template"
@@ -32,17 +57,10 @@ var (
         "{{.Spec.ContentType}}": template.Must(template.New("{{.Parent.FuncName}}!{{.Spec.ContentType}}").Parse(__BACKTICK__{{.Body}}__BACKTICK__)),
         {{end}}
     }
-    local{{.FuncName}}App = goaspen.DeclareApp("{{.GenPackage}}")
-    _ = local{{.FuncName}}App.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    ` + simplateTmplWebFuncDeclaration + `
 )
 
-func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
-    var err error
-    app := local{{.FuncName}}App
-    ctx := make(map[string]interface{})
-    response := app.NewHTTPResponseWrapper(w, req)
-
-    {{.LogicPage.Body}}
+` + simplateTmplFuncHeader + `
 
     {{range .TemplatePages}}
     response.RegisterContentTypeHandler("{{.Spec.ContentType}}",
@@ -61,38 +79,18 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
         })
     {{end}}
 
-    response.NegotiateAndCallHandler()
-    if err != nil {
-        response.SetError(err)
-    }
-
+` + simplateTmplFuncFooter + `
     response.Respond()
 }
 `
-	simplateTypeJSONTmpl = `
+	simplateTypeJSONTmpl = simplateTmplCommonHeader + `
 {{.InitPage.Body}}
 
 var (
-    local{{.FuncName}}App = goaspen.DeclareApp("{{.GenPackage}}")
-    _ = local{{.FuncName}}App.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+` + simplateTmplWebFuncDeclaration + `
 )
 
-func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) {
-    var err error
-    app := local{{.FuncName}}App
-    ctx := make(map[string]interface{})
-    response := app.NewHTTPResponseWrapper(w, req)
-
-    response.RegisterContentTypeHandler("{{.ContentType}}",
-        func(response *goaspen.HTTPResponseWrapper) {
-        {{.LogicPage.Body}}
-        })
-
-    response.NegotiateAndCallHandler()
-    if err != nil {
-        response.SetError(err)
-    }
-
+` + simplateTmplFuncHeader + simplateTmplFuncFooter + `
     response.RespondJSON()
 }
 `
@@ -101,7 +99,6 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, req *http.Request) 
 
 func escapedSimplateTemplate(tmplString, name string) *template.Template {
 	tmpl := template.New(name)
-	tmplString = simplateTmplCommonHeader + tmplString
 	escTmplString := strings.Replace(tmplString, "__BACKTICK__", "`", -1)
 	return template.Must(tmpl.Parse(escTmplString))
 }

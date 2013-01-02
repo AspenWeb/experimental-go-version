@@ -37,6 +37,7 @@ type simplate struct {
 	GenPackage    string
 	SiteRoot      string
 	Filename      string
+	AbsFilename   string
 	Type          string
 	ContentType   string
 	InitPage      *simplatePage
@@ -60,12 +61,12 @@ func newSimplateFromString(packageName,
 
 	var err error
 
-	filename, err = filepath.Abs(filename)
+	absFilename, err := filepath.Abs(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	filename, err = filepath.Rel(siteRoot, filename)
+	filename, err = filepath.Rel(siteRoot, absFilename)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +78,7 @@ func newSimplateFromString(packageName,
 		GenPackage:  packageName,
 		SiteRoot:    siteRoot,
 		Filename:    filename,
+		AbsFilename: absFilename,
 		Type:        SimplateTypeStatic,
 		ContentType: mime.TypeByExtension(path.Ext(filename)),
 	}
