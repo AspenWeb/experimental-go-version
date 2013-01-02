@@ -9,6 +9,7 @@ clean:
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
 
 docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:
+	mkdir -p docroot/Sandwich/Factory/meats\ and\ cheeses
 	curl -s http://en.wikipedia.org/wiki/Reuben_sandwich > "$@"
 
 .PHONY: smoke clean
