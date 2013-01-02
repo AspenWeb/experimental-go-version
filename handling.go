@@ -19,7 +19,7 @@ const (
 
 type handlerFuncRegistration struct {
 	RequestPath string
-	HandlerFunc func(http.ResponseWriter, *http.Request)
+	HandlerFunc http.HandlerFunc
 	Receiver    *directoryHandler
 
 	app *App

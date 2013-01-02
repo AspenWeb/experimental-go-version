@@ -72,7 +72,7 @@ func (me *App) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Request) 
 }
 
 func (me *App) NewHandlerFuncRegistration(requestPath string,
-	handler func(http.ResponseWriter, *http.Request)) *handlerFuncRegistration {
+	handler http.HandlerFunc) *handlerFuncRegistration {
 
 	if len(requestPath) < 1 {
 		panic(fmt.Errorf("Invalid request path %q", requestPath))
