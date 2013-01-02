@@ -75,37 +75,15 @@ var (
   <head>
     <title>{{.RequestPath}}</title>
     <style type="text/css">
-      body {
-          font-family: monospace;
-      }
-
-      #directory_listing {
-          font-size: 12px;
-      }
-
-      td, th {
-          padding: 1px 5px;
-      }
-
-      .entry {
-          text-align: left;
-      }
-
-      .entry.name {
-          width: 200px;
-      }
-
-      .entry.mode {
-          width: 100px;
-      }
-
-      .entry.size {
-          width: 80px;
-      }
-
-      #server_signature {
-          font-size: 9px;
-      }
+      body { font-family: monospace; }
+      #directory_listing { font-size: 12px; }
+      td, th { padding: 1px 5px; }
+      tr:hover { background: #eef; }
+      .entry { text-align: left; }
+      .entry.name { width: 300px; }
+      .entry.size { width: 50px; }
+      .entry.mtime { width: 300px; }
+      #server_signature { font-size: 9px; font-style: oblique; }
     </style>
   </head>
   <body>
@@ -114,29 +92,30 @@ var (
     <table id="directory_listing">
       <thead>
         <tr>
-          <th class="entry name">name</th>
-          <th class="entry mode">mode</th>
-          <th class="entry size">size</th>
+          <th class="entry name">Name</th>
+          <th class="entry size">Size</th>
+          <th class="entry mtime">Last Modified</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="entry name"><a href="{{.WebParentDir}}">../</a></td>
-          <td class="entry mode">-</td>
           <td class="entry size">-</td>
+          <td class="entry mtime">-</td>
         </tr>
         {{range .Entries}}
         <tr>
           <td class="entry name"><a href="{{.RequestPath}}">{{.LinkName}}</a></td>
-          <td class="entry mode">{{.FileInfo.Mode}}</td>
           <td class="entry size">{{.FileInfo.Size}}B</td>
+          <td class="entry mtime">{{.FileInfo.ModTime.UTC}}B</td>
         </tr>
         {{end}}
       </tbody>
     </table>
     <hr />
     <p id="server_signature">
-      <strong>^L
+      This index was brought to you by
+      <strong>
         <a href="https://github.com/meatballhat/goaspen">goaspen</a>
       </strong>
       (powered by <a href="http://golang.org">gophers</a>.)
