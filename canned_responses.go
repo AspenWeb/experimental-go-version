@@ -102,6 +102,10 @@ var (
       .entry.size {
           width: 80px;
       }
+
+      #server_signature {
+          font-size: 9px;
+      }
     </style>
   </head>
   <body>
@@ -117,19 +121,26 @@ var (
       </thead>
       <tbody>
         <tr>
-          <td class="entry name"><a href="{{.WebParentDir}}">..</a></td>
+          <td class="entry name"><a href="{{.WebParentDir}}">../</a></td>
           <td class="entry mode">-</td>
           <td class="entry size">-</td>
         </tr>
         {{range .Entries}}
         <tr>
-          <td class="entry name"><a href="{{.RequestPath}}">{{.FileInfo.Name}}</a></td>
+          <td class="entry name"><a href="{{.RequestPath}}">{{.LinkName}}</a></td>
           <td class="entry mode">{{.FileInfo.Mode}}</td>
           <td class="entry size">{{.FileInfo.Size}}B</td>
         </tr>
         {{end}}
       </tbody>
     </table>
+    <hr />
+    <p id="server_signature">
+      <strong>^L
+        <a href="https://github.com/meatballhat/goaspen">goaspen</a>
+      </strong>
+      (powered by <a href="http://golang.org">gophers</a>.)
+    </p>
   </body>
 </html>
 `))

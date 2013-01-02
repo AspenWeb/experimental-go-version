@@ -1,0 +1,7 @@
+<sandwich-manifest>
+  <sandwiches dest="factory">
+    <sandwich name="Regular hamBURger" weight="110" />
+    <sandwich name="Deluxe hamBURger" weight="230" />
+    <sandwich name="Miniature hamBURger" weight="20" />
+  </sandwiches>
+</sandwich-manifest>

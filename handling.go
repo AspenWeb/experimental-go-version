@@ -41,6 +41,7 @@ type directoryListing struct {
 
 type directoryListingEntry struct {
 	RequestPath string
+	LinkName    string
 	FileInfo    os.FileInfo
 }
 
@@ -232,8 +233,17 @@ func newDirListing(requestPath, dirPath string) (*directoryListing, error) {
 	dlEntries := []*directoryListingEntry{}
 
 	for _, ent := range entries {
+		reqPath := path.Join(requestPath, ent.Name())
+		linkName := ent.Name()
+
+		if ent.IsDir() {
+			reqPath = reqPath + "/"
+			linkName = linkName + "/"
+		}
+
 		dlEnt := &directoryListingEntry{
-			RequestPath: path.Join(requestPath, ent.Name()),
+			RequestPath: reqPath,
+			LinkName:    linkName,
 			FileInfo:    ent,
 		}
 
@@ -263,7 +273,13 @@ func (me *directoryListing) WebParentDir() string {
 		return "/"
 	}
 
-	return path.Dir(me.RequestPath)
+	parDir := path.Dir(strings.TrimRight(me.RequestPath, "/"))
+
+	if parDir == "/" {
+		return "/"
+	}
+
+	return parDir + "/"
 }
 
 func (me *serveDirError) Error() string {
