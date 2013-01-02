@@ -2,10 +2,13 @@ GOASPEN_BUILD_OPTS := -w docroot -P goaspen_smoke_test \
 	--indices +default.htm --list_directories \
 	-x -s --changes_reload
 
-smoke:
+smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
 	GOPATH=./:$(GOPATH) goaspen-build $(GOASPEN_BUILD_OPTS)
 
 clean:
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
+
+docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:
+	curl -s http://en.wikipedia.org/wiki/Reuben_sandwich > "$@"
 
 .PHONY: smoke clean
