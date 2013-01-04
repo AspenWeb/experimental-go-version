@@ -154,7 +154,7 @@ func (me *simplate) Execute(wr io.Writer) (err error) {
 		}
 	}(errAddr)
 
-	debugf("Executing to %s\n", wr)
+	debugf("Executing to %+v\n", wr)
 	*errAddr = simplateTypeTemplates[me.Type].Execute(wr, me)
 	return
 }

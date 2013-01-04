@@ -43,9 +43,7 @@ func AddCommonServingOptions(serverBind,
 }
 
 func RunServerMain(wwwRoot, serverBind, packageName,
-	charsetDynamic, charsetStatic, indices string, listDirs bool) {
-
-	debug := false
+	charsetDynamic, charsetStatic, indices string, listDirs, debug bool) {
 
 	AddCommonServingOptions(serverBind,
 		wwwRoot, charsetDynamic, charsetStatic, indices, debug, listDirs)

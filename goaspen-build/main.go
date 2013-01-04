@@ -181,8 +181,6 @@ func main() {
 		indicesArray = append(indicesArray, strings.TrimSpace(part))
 	}
 
-	log.Printf("Passing in indices of %v", indicesArray)
-
 	for {
 		retcode = goaspen.BuildMain(&goaspen.SiteBuilderCfg{
 			WwwRoot:       wwwRoot,
@@ -197,6 +195,7 @@ func main() {
 			CharsetStatic:  charsetStatic,
 			Indices:        indicesArray,
 			ListDirs:       listDirs,
+			Debug:          debug,
 		})
 
 		if !runServer {

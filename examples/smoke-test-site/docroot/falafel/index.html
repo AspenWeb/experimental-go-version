@@ -1,0 +1,18 @@
+
+food := request.URL.Query().Get("food")
+if len(food) == 0 {
+  food = "Sandwiches"
+}
+
+ctx["Food"] = food
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Falafel!</title>
+  </head>
+  <body>
+    <h1>Falafel!</h1>
+    <p>Unless you'd prefer {{.Food}}?</p>
+  </body>
+</html>

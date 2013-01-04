@@ -3,7 +3,8 @@ GOASPEN_BUILD_OPTS := -w docroot -P goaspen_smoke_test \
 	-x -s --changes_reload
 
 smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
-	GOPATH=./:$(GOPATH) goaspen-build $(GOASPEN_BUILD_OPTS)
+	GOASPEN_CONFIGURATION_SCRIPTS=./web-config.go \
+		  DEBUG=1 GOPATH=./:$(GOPATH) goaspen-build $(GOASPEN_BUILD_OPTS)
 
 clean:
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
