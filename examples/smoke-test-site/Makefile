@@ -7,6 +7,8 @@ smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
 		  DEBUG=1 GOPATH=./:$(GOPATH) goaspen-build $(GOASPEN_BUILD_OPTS)
 
 clean:
+	rm -vf ./bin/goaspen_smoke_test-http-server
+	rm -rvf ./src/goaspen_smoke_test
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
 
 docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:

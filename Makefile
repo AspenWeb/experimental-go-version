@@ -17,6 +17,6 @@ clean:
 	go clean -x -i $(TARGETS)
 
 smoke: test
-	$(MAKE) -C examples/smoke-test-site
+	$(MAKE) -C examples/smoke-test-site clean smoke
 
 .PHONY: test build deps clean smoke
