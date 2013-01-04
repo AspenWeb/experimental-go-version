@@ -42,8 +42,7 @@ exist, or the '-m' flag may be passed to ensure it exists.
 )
 
 func init() {
-	usageInfoAddr := &usageInfo
-	*usageInfoAddr = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
+	*(&usageInfo) = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
 func watchForChanges(wwwRoot string, q chan bool) error {

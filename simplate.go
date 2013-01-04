@@ -145,17 +145,15 @@ func (me *simplate) FirstTemplatePage() *simplatePage {
 }
 
 func (me *simplate) Execute(wr io.Writer) (err error) {
-	errAddr := &err
-
 	defer func(err *error) {
 		r := recover()
 		if r != nil {
 			*err = fmt.Errorf("%v", r)
 		}
-	}(errAddr)
+	}(&err)
 
 	debugf("Executing to %+v\n", wr)
-	*errAddr = simplateTypeTemplates[me.Type].Execute(wr, me)
+	*(&err) = simplateTypeTemplates[me.Type].Execute(wr, me)
 	return
 }
 

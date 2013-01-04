@@ -6,12 +6,11 @@ import (
 )
 
 var (
-	isDebug     = false
-	isDebugAddr = &isDebug
+	isDebug = false
 )
 
 func init() {
-	*isDebugAddr = len(os.Getenv("DEBUG")) > 0
+	*(&isDebug) = len(os.Getenv("DEBUG")) > 0
 }
 
 func debugf(format string, v ...interface{}) {
@@ -21,5 +20,5 @@ func debugf(format string, v ...interface{}) {
 }
 
 func SetDebug(truth bool) {
-	*isDebugAddr = truth
+	*(&isDebug) = truth
 }

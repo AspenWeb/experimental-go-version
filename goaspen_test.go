@@ -113,11 +113,8 @@ func init() {
 		}
 	}
 
-	goCmdAddr := &goCmd
-	*goCmdAddr = cmd
-
-	noCleanupAddr := &noCleanup
-	*noCleanupAddr = len(os.Getenv("GOASPEN_TEST_NOCLEANUP")) > 0
+	*(&goCmd) = cmd
+	*(&noCleanup) = len(os.Getenv("GOASPEN_TEST_NOCLEANUP")) > 0
 }
 
 func mkTmpDir() {

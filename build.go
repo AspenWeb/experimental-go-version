@@ -13,8 +13,7 @@ import (
 
 var (
 	DefaultGenPackage   = "goaspen_gen"
-	DefaultOutputGopath string
-	defaultOutDirAddr   = &DefaultOutputGopath
+	DefaultOutputGopath = ""
 	genServerTemplate   = template.Must(template.New("goaspen-genserver").Parse(`
 package main
 // GENERATED FILE - DO NOT EDIT
@@ -84,7 +83,7 @@ type simplateSummary struct {
 }
 
 func init() {
-	*defaultOutDirAddr = strings.Split(os.Getenv("GOPATH"), ":")[0]
+	*(&DefaultOutputGopath) = strings.Split(os.Getenv("GOPATH"), ":")[0]
 }
 
 func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
