@@ -52,6 +52,7 @@ import (
 {{.InitPage.Body}}
 
 var (
+    _ = goaspen.EnsureInitialized()
     simplateTmplMap{{.FuncName}} = map[string]*template.Template{
         {{range .TemplatePages}}
         "{{.Spec.ContentType}}": template.Must(template.New("{{.Parent.FuncName}}!{{.Spec.ContentType}}").Parse(__BACKTICK__{{.Body}}__BACKTICK__)),
@@ -87,6 +88,7 @@ var (
 {{.InitPage.Body}}
 
 var (
+    _ = goaspen.EnsureInitialized()
 ` + simplateTmplWebFuncDeclaration + `
 )
 

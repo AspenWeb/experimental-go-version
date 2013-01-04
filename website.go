@@ -20,6 +20,7 @@ var (
 	DefaultIndices        = strings.Join(DefaultIndicesArray, ",")
 	DefaultConfig         = &WebsiteConfigurer{}
 
+	initialized  = false
 	websites     = map[string]*Website{}
 	protoWebsite = &Website{
 		PackageName: DefaultGenPackage,
@@ -49,20 +50,25 @@ type Website struct {
 	configured               bool
 }
 
-type WebsiteConfigurer struct {
-}
+type WebsiteConfigurer struct{}
 
-func init() {
+func EnsureInitialized() *Website {
+	if initialized {
+		return protoWebsite
+	}
+
 	if len(os.Getenv("__GOASPEN_PARENT_PROCESS")) > 0 {
-		return
+		return protoWebsite
 	}
 
 	configScripts := os.Getenv("GOASPEN_CONFIGURATION_SCRIPTS")
 
 	if len(configScripts) > 0 {
-		protoWebAddr := &protoWebsite
-		*protoWebAddr = loadProtoWebsite(configScripts, protoWebsite)
+		*(&protoWebsite) = loadProtoWebsite(configScripts, protoWebsite)
 	}
+
+	*(&initialized) = true
+	return protoWebsite
 }
 
 func DeclareWebsite(packageName string) *Website {
