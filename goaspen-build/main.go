@@ -71,7 +71,7 @@ func watchForChanges(wwwRoot string, q chan bool) error {
 				return nil
 			}
 		case err := <-watcher.Error:
-			log.Panicln("error:", err)
+			log.Println("ERROR: inotify:", err)
 		}
 	}
 
