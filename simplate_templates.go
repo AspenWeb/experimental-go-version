@@ -24,8 +24,11 @@ import (
 `
 	simplateTmplWebFuncDeclaration = `
     local{{.FuncName}}Website = goaspen.DeclareWebsite("{{.GenPackage}}")
-    _ = local{{.FuncName}}Website.NewHandlerFuncRegistration("/{{.Filename}}",
-        SimplateHandlerFunc{{.FuncName}}, false)
+
+    _ = local{{.FuncName}}Website.RegisterSimplate("{{.Type}}",
+        "{{.SiteRoot}}",
+        "/{{.Filename}}",
+        SimplateHandlerFunc{{.FuncName}})
 `
 	simplateTmplFuncHeader = `
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, request *http.Request) {
@@ -60,11 +63,13 @@ import (
 
 var (
     _ = goaspen.EnsureInitialized()
+
     simplateTmplMap{{.FuncName}} = map[string]*template.Template{
         {{range .TemplatePages}}
         "{{.Spec.ContentType}}": template.Must(template.New("{{.Parent.FuncName}}!{{.Spec.ContentType}}").Parse(__BACKTICK__{{.Body}}__BACKTICK__)),
         {{end}}
     }
+
     ` + simplateTmplWebFuncDeclaration + `
 )
 
@@ -96,6 +101,7 @@ var (
 
 var (
     _ = goaspen.EnsureInitialized()
+
 ` + simplateTmplWebFuncDeclaration + `
 )
 

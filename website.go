@@ -218,16 +218,17 @@ func (me *Website) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Reque
 	}
 }
 
-func (me *Website) NewHandlerFuncRegistration(requestPath string,
-	handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
+func (me *Website) RegisterSimplate(simplateType, siteRoot, requestPath string,
+	handler http.HandlerFunc) *handlerFuncRegistration {
 
-	return me.pipelineHandler.NewHandlerFuncRegistration(requestPath, handler, isDir)
+	return me.pipelineHandler.NewHandlerFuncRegistration(requestPath,
+		simplateType, handler, false)
 }
 
-func (me *websitePipelineHandler) NewHandlerFuncRegistration(requestPath string,
-	handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
+func (me *websitePipelineHandler) NewHandlerFuncRegistration(requestPath,
+	simplateType string, handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
 
-	debugf("NewHandlerFuncRegistration(%q, <func>)", requestPath)
+	debugf("NewHandlerFuncRegistration(%q, %q, <func>, %v)", requestPath, simplateType, isDir)
 
 	if len(requestPath) < 1 {
 		panic(fmt.Errorf("Invalid request path %q", requestPath))
@@ -373,7 +374,7 @@ func (me *websitePipelineHandler) addRegexpToDirectoryHandler(wwwRoot, dir, requ
 		}
 
 		debugf("Creating new handler func for dir %q", dir)
-		reg = me.NewHandlerFuncRegistration(dir,
+		reg = me.NewHandlerFuncRegistration(dir, "",
 			func(w http.ResponseWriter, req *http.Request) {
 				dirHandler.Handle(w, req)
 			}, true)
