@@ -9,6 +9,10 @@ var (
 	simplateTmplCommonHeader = `
 package {{.GenPackage}}
 // GENERATED FILE - DO NOT EDIT
+//
+// Source: {{.AbsFilename}}
+// Type:   {{.Type}}
+//
 // Rebuild with goaspen-build!
 
 import (
@@ -20,17 +24,20 @@ import (
 `
 	simplateTmplWebFuncDeclaration = `
     local{{.FuncName}}Website = goaspen.DeclareWebsite("{{.GenPackage}}")
-    _ = local{{.FuncName}}Website.NewHandlerFuncRegistration("/{{.Filename}}", SimplateHandlerFunc{{.FuncName}})
+    _ = local{{.FuncName}}Website.NewHandlerFuncRegistration("/{{.Filename}}",
+        SimplateHandlerFunc{{.FuncName}}, false)
 `
 	simplateTmplFuncHeader = `
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, request *http.Request) {
     var err error
     website := local{{.FuncName}}Website
+    website.DebugNewRequest(request)
 
     response := website.NewHTTPResponseWrapper(w, request)
 
     __file__ := "{{.AbsFilename}}"
-    ctx := make(map[string]interface{})
+    ctx := map[string]interface{}{}
+    goaspen.UpdateContextFromVirtualPaths(&ctx, request.URL.Path, "/{{.Filename}}")
 
     {{.LogicPage.Body}}
 `

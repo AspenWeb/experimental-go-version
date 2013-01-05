@@ -44,10 +44,28 @@ type Website struct {
 	ListDirs       bool
 	Debug          bool
 
-	server                   *serverContext
+	server          *serverContext
+	pipelineHandler *websitePipelineHandler
+	configured      bool
+}
+
+type websitePipelineHandler struct {
+	website *Website
+
+	httpHandlers             []http.Handler
 	handlerFuncRegistrations map[string]*handlerFuncRegistration
 	regLock                  sync.RWMutex
-	configured               bool
+}
+
+type websitePatternHandler struct {
+	website *Website
+
+	handlerFuncRegistrations map[string]*handlerFuncRegistration
+	regLock                  sync.RWMutex
+}
+
+type websiteStaticHandler struct {
+	website *Website
 }
 
 type WebsiteConfigurer struct{}
@@ -85,9 +103,22 @@ func DeclareWebsite(packageName string) *Website {
 		Indices:        protoWebsite.Indices,
 		ListDirs:       protoWebsite.ListDirs,
 		Debug:          protoWebsite.Debug,
+	}
+	newSite.pipelineHandler = &websitePipelineHandler{
+		website: newSite,
 
+		httpHandlers:             []http.Handler{},
 		handlerFuncRegistrations: map[string]*handlerFuncRegistration{},
 	}
+	newSite.pipelineHandler.Add(&websiteStaticHandler{
+		website: newSite,
+	})
+	newSite.pipelineHandler.Add(&websitePatternHandler{
+		website: newSite,
+
+		handlerFuncRegistrations: map[string]*handlerFuncRegistration{},
+	})
+
 	websites[packageName] = newSite
 
 	return newSite
@@ -188,7 +219,13 @@ func (me *Website) NewHTTPResponseWrapper(w http.ResponseWriter, req *http.Reque
 }
 
 func (me *Website) NewHandlerFuncRegistration(requestPath string,
-	handler http.HandlerFunc) *handlerFuncRegistration {
+	handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
+
+	return me.pipelineHandler.NewHandlerFuncRegistration(requestPath, handler, isDir)
+}
+
+func (me *websitePipelineHandler) NewHandlerFuncRegistration(requestPath string,
+	handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
 
 	debugf("NewHandlerFuncRegistration(%q, <func>)", requestPath)
 
@@ -196,50 +233,78 @@ func (me *Website) NewHandlerFuncRegistration(requestPath string,
 		panic(fmt.Errorf("Invalid request path %q", requestPath))
 	}
 
-	me.regLock.RLock()
-	defer me.regLock.RUnlock()
-
 	pathBase := path.Base(requestPath)
 	pathDir := path.Dir(requestPath)
+	isVirtual := vPathPart.MatchString(requestPath)
+	debugf("Setting `Virtual` to %v for %q", isVirtual, requestPath)
 
-	me.handlerFuncRegistrations[requestPath] = &handlerFuncRegistration{
-		RequestPath: requestPath,
-		HandlerFunc: handler,
-		Receiver:    nil,
-
-		website: me,
+	requestPathPattern := requestPath
+	if isVirtual {
+		requestPathPattern = virtualToRegexp(requestPath)
 	}
 
-	debugf("Checking if %q matches any of %v", pathBase, me.Indices)
+	me.AddHandlerFunc(requestPath, &handlerFuncRegistration{
+		RequestPath: requestPathPattern,
+		HandlerFunc: handler,
+		Virtual:     isVirtual,
 
-	for _, idx := range me.Indices {
+		website: me.website,
+	})
+
+	debugf("Checking if %q matches any of %v", pathBase, me.website.Indices)
+
+	for _, idx := range me.website.Indices {
 		if pathBase == idx {
 			debugf("Registering %q with same handler as %q", pathDir, pathBase)
-			me.handlerFuncRegistrations[pathDir] = &handlerFuncRegistration{
+			me.AddHandlerFunc(pathDir, &handlerFuncRegistration{
 				RequestPath: pathDir,
 				HandlerFunc: handler,
-				Receiver:    nil,
+				Virtual:     isVirtual,
 
-				website: me,
-			}
+				website: me.website,
+			})
 		}
 	}
 
-	if !strings.HasSuffix(requestPath, "/") && len(path.Ext(requestPath)) == 0 {
-		pathGlob := requestPath + ".*"
-		me.handlerFuncRegistrations[pathGlob] = &handlerFuncRegistration{
-			RequestPath: pathGlob,
+	if !isDir && !strings.HasSuffix(requestPath, "/") && len(path.Ext(requestPath)) == 0 {
+		debugf("Registering %q as a negotiated simplate", requestPath)
+
+		pathRegexp := requestPathPattern + "\\.[^\\.]+"
+
+		me.AddHandlerFunc(pathRegexp, &handlerFuncRegistration{
+			RequestPath: pathRegexp,
 			HandlerFunc: handler,
-			Receiver:    nil,
+			Negotiated:  true,
+			Virtual:     isVirtual,
 
-			website: me,
-		}
+			website: me.website,
+		})
 	}
 
-	return me.handlerFuncRegistrations[requestPath]
+	return me.HandlerFuncAt(requestPath)
 }
 
-func (me *Website) expandAllHandlerFuncRegistrations() error {
+func virtualToRegexp(requestPath string) string {
+	return vPathPart.ReplaceAllString(requestPath, "(?P<$1>[a-zA-Z_][-a-zA-Z0-9_]*)")
+}
+
+func findHighestNormalDir(requestPath string) string {
+	if strings.Contains(requestPath, "%") {
+		parts := strings.SplitN(requestPath, "%", 2)
+		if len(parts[0]) > 1 {
+			return parts[0]
+		}
+	}
+
+	parts := strings.SplitN(requestPath, "\\", 2)
+	if len(parts[0]) > 1 && strings.HasSuffix(parts[0], "/") {
+		return parts[0]
+	}
+
+	return "/"
+}
+
+func (me *websitePipelineHandler) expandAllHandlerFuncRegistrations() error {
 	debugf("Expanding all handler func registrations!")
 
 	for _, reg := range me.handlerFuncRegistrations {
@@ -252,13 +317,15 @@ func (me *Website) expandAllHandlerFuncRegistrations() error {
 	return nil
 }
 
-func (me *Website) expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
-	if path.Ext(reg.RequestPath) == ".*" {
-		debugf("Found glob registration %q, adding to directory handler",
-			reg.RequestPath)
+func (me *websitePipelineHandler) expandHandlerFuncRegistration(reg *handlerFuncRegistration) error {
+	destDir := findHighestNormalDir(reg.RequestPath)
 
-		err := me.addGlobToDirectoryHandler(me.WwwRoot,
-			path.Dir(reg.RequestPath), reg.RequestPath, reg.HandlerFunc)
+	if reg.Virtual || reg.Negotiated {
+		debugf("Adding negotiated or virtual path registration %q to "+
+			"directory handler at %q", reg.RequestPath, destDir)
+
+		err := me.addRegexpToDirectoryHandler(me.website.WwwRoot,
+			destDir, reg.RequestPath, reg.HandlerFunc)
 		if err != nil {
 			return err
 		}
@@ -269,7 +336,7 @@ func (me *Website) expandHandlerFuncRegistration(reg *handlerFuncRegistration) e
 	return nil
 }
 
-func (me *Website) registerAllHandlerFuncs() error {
+func (me *websitePipelineHandler) registerAllHandlerFuncs() error {
 	debugf("Registering all handler funcs!")
 
 	for _, reg := range me.handlerFuncRegistrations {
@@ -282,7 +349,7 @@ func (me *Website) registerAllHandlerFuncs() error {
 	return nil
 }
 
-func (me *Website) registerHandlerFunc(reg *handlerFuncRegistration) error {
+func (me *websitePipelineHandler) registerHandlerFunc(reg *handlerFuncRegistration) error {
 	me.regLock.RLock()
 	defer me.regLock.RUnlock()
 
@@ -290,8 +357,8 @@ func (me *Website) registerHandlerFunc(reg *handlerFuncRegistration) error {
 	return nil
 }
 
-func (me *Website) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
-	handler func(http.ResponseWriter, *http.Request)) error {
+func (me *websitePipelineHandler) addRegexpToDirectoryHandler(wwwRoot, dir, requestPath string,
+	handler http.HandlerFunc) error {
 
 	var reg *handlerFuncRegistration
 
@@ -302,30 +369,37 @@ func (me *Website) addGlobToDirectoryHandler(wwwRoot, dir, requestPath string,
 			DirectoryPath:   dir,
 			PatternHandlers: map[string]*handlerFuncRegistration{},
 
-			website: me,
+			website: me.website,
 		}
 
+		debugf("Creating new handler func for dir %q", dir)
 		reg = me.NewHandlerFuncRegistration(dir,
 			func(w http.ResponseWriter, req *http.Request) {
 				dirHandler.Handle(w, req)
-			})
+			}, true)
 		reg.Receiver = dirHandler
+	}
+
+	if present && dirHandlerReg.Receiver == nil {
+		debugf("Already non-dir handler %q for %q, so going up a level",
+			dirHandlerReg.RequestPath, requestPath)
+		return me.addRegexpToDirectoryHandler(wwwRoot,
+			path.Dir(dir), requestPath, handler)
 	}
 
 	dirHandlerReg = me.handlerFuncRegistrations[dir]
 	if dirHandlerReg.Receiver == nil {
-		return fmt.Errorf("Cannot add glob to directory handler for %q", dir)
+		return fmt.Errorf("Cannot add regexp to directory handler for %q", dir)
 	}
 
-	globReg := &handlerFuncRegistration{
+	reReg := &handlerFuncRegistration{
 		RequestPath: requestPath,
 		HandlerFunc: handler,
-		Receiver:    nil,
 
-		website: me,
+		website: me.website,
 	}
 
-	err := dirHandlerReg.Receiver.AddGlob(requestPath, globReg)
+	err := dirHandlerReg.Receiver.AddRegexp(requestPath, reReg)
 	if err != nil {
 		return err
 	}
@@ -357,22 +431,60 @@ func (me *Website) Configure(serverBind, wwwRoot, charsetDynamic,
 	me.configured = true
 }
 
+func (me *websitePipelineHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	panic(fmt.Errorf("NOT IMPLEMENTED"))
+}
+
+func (me *websitePipelineHandler) Add(h http.Handler) {
+	me.httpHandlers = append(me.httpHandlers, h)
+}
+
+func (me *websitePipelineHandler) AddHandlerFunc(requestPath string,
+	r *handlerFuncRegistration) {
+
+	me.regLock.RLock()
+	defer me.regLock.RUnlock()
+
+	me.handlerFuncRegistrations[requestPath] = r
+}
+
+func (me *websitePipelineHandler) HandlerFuncAt(requestPath string) *handlerFuncRegistration {
+	if r, ok := me.handlerFuncRegistrations[requestPath]; ok {
+		return r
+	}
+
+	return nil
+}
+
+func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	panic(fmt.Errorf("NOT IMPLEMENTED"))
+}
+
+func (me *websiteStaticHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// TODO remember to use http.ServeFile!
+	panic(fmt.Errorf("NOT IMPLEMENTED"))
+}
+
 func (me *Website) RunServer() error {
 	if !me.configured {
 		return fmt.Errorf("Can't run the server when we aren't configured!")
 	}
 
-	err := me.expandAllHandlerFuncRegistrations()
+	err := me.pipelineHandler.expandAllHandlerFuncRegistrations()
 	if err != nil {
 		return err
 	}
 
-	err = me.registerAllHandlerFuncs()
+	err = me.pipelineHandler.registerAllHandlerFuncs()
 	if err != nil {
 		return err
 	}
 
 	return me.server.Run()
+}
+
+func (me *Website) DebugNewRequest(req *http.Request) {
+	debugf("Handling new request %+v", req.URL)
 }
 
 func (me *WebsiteConfigurer) Load(r io.Reader) (*Website, error) {

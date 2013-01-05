@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -21,6 +22,8 @@ type handlerFuncRegistration struct {
 	RequestPath string
 	HandlerFunc http.HandlerFunc
 	Receiver    *directoryHandler
+	Negotiated  bool
+	Virtual     bool
 
 	website *Website
 }
@@ -57,7 +60,7 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	req.Header.Set(pathTransHeader, fullPath)
 
 	for requestUri, handler := range me.PatternHandlers {
-		matched, err := path.Match(requestUri, req.URL.Path)
+		matched, err := regexp.Match(requestUri, []byte(req.URL.Path))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(http500Response)
@@ -66,8 +69,9 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 		if matched {
 			defer handler.HandlerFunc(w, req)
 			return
+		} else {
+			debugf("Request path %q did not match %q", req.URL.Path, requestUri)
 		}
-
 	}
 
 	err := me.serveStatic(w, req)
@@ -85,23 +89,25 @@ func (me *directoryHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if strings.HasSuffix(req.URL.Path, "/favicon.ico") {
+		debugf("Serving canned favicon response for %q", req.URL.Path)
 		w.Header().Set("Content-Type", "image/x-icon")
 		w.WriteHeader(http.StatusOK)
 		w.Write(faviconIco)
 		return
 	}
 
+	debugf("Falling through to 404 for %q!", req.URL.Path)
 	w.Header().Set("Content-Type",
 		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	w.WriteHeader(http.StatusNotFound)
 	w.Write(http404Response)
 }
 
-func (me *directoryHandler) AddGlob(pathGlob string,
+func (me *directoryHandler) AddRegexp(pathRegexp string,
 	reg *handlerFuncRegistration) error {
 
-	debugf("Adding glob %q to pattern handlers for %q", pathGlob, me.DirectoryPath)
-	me.PatternHandlers[pathGlob] = reg
+	debugf("Adding regexp %q to pattern handlers for %q", pathRegexp, me.DirectoryPath)
+	me.PatternHandlers[pathRegexp] = reg
 	return nil
 }
 
@@ -284,4 +290,30 @@ func (me *directoryListing) WebParentDir() string {
 
 func (me *serveDirError) Error() string {
 	return fmt.Sprintf("Directory %q cannot be served!", me.Path)
+}
+
+func UpdateContextFromVirtualPaths(ctx *map[string]interface{},
+	requestPath, vPath string) {
+
+	realCtx := *ctx
+
+	rpParts := strings.Split(requestPath, "/")
+	vpParts := strings.Split(vPath, "/")
+
+	if len(rpParts) != len(vpParts) {
+		debugf("Request and virtual paths have different "+
+			"part counts, so not updating request context: %q, %q",
+			requestPath, vPath)
+		return
+	}
+
+	for i, vPart := range vpParts {
+		if len(vPart) < 1 {
+			continue
+		}
+
+		if vPart[0] == '%' {
+			realCtx[vPart[1:]] = rpParts[i]
+		}
+	}
 }

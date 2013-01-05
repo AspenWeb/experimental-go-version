@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"mime"
 	"os"
 	"os/exec"
@@ -95,6 +96,8 @@ var (
 )
 
 func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	err := os.Setenv("GOPATH", strings.Join([]string{tmpdir, os.Getenv("GOPATH")}, ":"))
 	if err != nil {
 		if noCleanup {
@@ -248,13 +251,13 @@ func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/flip/dippy slippy/snork.d/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/flip/dippy slippy/%zonk/snork.d/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if s.OutputName() != "flip-SLASH-dippy-SPACE-slippy-SLASH-snork-DOT-d-SLASH-basic-rendered-DOT-txt.go" {
+	if s.OutputName() != "flip-SLASH-dippy-SPACE-slippy-SLASH-PCT-zonk-SLASH-snork-DOT-d-SLASH-basic-rendered-DOT-txt.go" {
 		t.Errorf("Rendered simplate output name is wrong!: %v", s.OutputName())
 	}
 }
@@ -397,7 +400,7 @@ func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated.txt", basicNegotiatedSimplate)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -409,7 +412,7 @@ func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated.txt", basicNegotiatedSimplate)
+	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -758,5 +761,26 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 	if fi.Mode() != (os.FileMode)(0750) {
 		t.Errorf("Site server binary %q permissions != %v: %v",
 			serverBinary, (os.FileMode)(0750), fi.Mode())
+	}
+}
+
+func TestUpdatesContextFromVirtualPaths(t *testing.T) {
+	ctx := map[string]interface{}{}
+
+	bar := fmt.Sprintf("%v", rand.Int())
+	hamster := fmt.Sprintf("%v", rand.Int())
+
+	UpdateContextFromVirtualPaths(&ctx,
+		fmt.Sprintf("/foo/%v/%v/dance", bar, hamster),
+		"/foo/%bar/%hamster/dance")
+
+	if value, ok := ctx["bar"]; !ok || value != bar {
+		t.Errorf("\"bar\" != %q: %v", bar, value)
+		return
+	}
+
+	if value, ok := ctx["hamster"]; !ok || value != hamster {
+		t.Errorf("\"hamster\" != %q: %v", hamster, value)
+		return
 	}
 }

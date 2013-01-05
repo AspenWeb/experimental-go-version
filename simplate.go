@@ -6,6 +6,7 @@ import (
 	"mime"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -31,6 +32,8 @@ var (
 		SimplateTypeStatic:     nil,
 	}
 	defaultRenderer = "#!go/text/template"
+	nonAlNumDash    = regexp.MustCompile("[^-a-zA-Z0-9]")
+	vPathPart       = regexp.MustCompile("%([a-zA-Z_][-a-zA-Z0-9_]*)")
 )
 
 type simplate struct {
@@ -60,6 +63,8 @@ func newSimplateFromString(packageName,
 	siteRoot, filename, content string) (*simplate, error) {
 
 	var err error
+	ext := path.Ext(filename)
+	hasExt := len(ext) > 0
 
 	absFilename, err := filepath.Abs(filename)
 	if err != nil {
@@ -80,10 +85,15 @@ func newSimplateFromString(packageName,
 		Filename:    filename,
 		AbsFilename: absFilename,
 		Type:        SimplateTypeStatic,
-		ContentType: mime.TypeByExtension(path.Ext(filename)),
+		ContentType: mime.TypeByExtension(ext),
 	}
 
 	if nbreaks == 1 || nbreaks == 2 {
+		if !hasExt {
+			return nil, fmt.Errorf("1 or 2 ^L found in simplate %q!  ",
+				"Rendered simplates must have a file extension!", filename)
+		}
+
 		s.InitPage, err = newSimplatePage(s, rawPages[0], false)
 		if err != nil {
 			return nil, err
@@ -110,6 +120,11 @@ func newSimplateFromString(packageName,
 	}
 
 	if nbreaks > 2 {
+		if hasExt {
+			return nil, fmt.Errorf("More than 2 ^L found in simplate %q! "+
+				"Negotiated simplates must not have a file extension!", filename)
+		}
+
 		s.Type = SimplateTypeNegotiated
 		s.InitPage, err = newSimplatePage(s, rawPages[0], false)
 		if err != nil {
@@ -161,7 +176,10 @@ func (me *simplate) escapedFilename() string {
 	fn := filepath.Clean(me.Filename)
 	lessDots := strings.Replace(fn, ".", "-DOT-", -1)
 	lessSlashes := strings.Replace(lessDots, "/", "-SLASH-", -1)
-	return strings.Replace(lessSlashes, " ", "-SPACE-", -1)
+	lessSpaces := strings.Replace(lessSlashes, " ", "-SPACE-", -1)
+	lessPercents := strings.Replace(lessSpaces, "%", "-PCT-", -1)
+	squeaky := nonAlNumDash.ReplaceAllString(lessPercents, "-")
+	return strings.Replace(squeaky, "--", "-", -1)
 }
 
 func (me *simplate) OutputName() string {
