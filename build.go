@@ -168,6 +168,8 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 
 func (me *siteBuilder) writeOneSource(simplate *simplate) error {
 	if simplate.Type == SimplateTypeStatic {
+		debugf("Site builder skipping write of static simplate %q",
+			simplate.Filename)
 		return nil
 	}
 
@@ -211,7 +213,10 @@ func (me *siteBuilder) writeGenServer() error {
 		return err
 	}
 
-	fd, err := os.Create(path.Join(dirname, "main.go"))
+	mainGo := path.Join(dirname, "main.go")
+	debugf("Site builder writing generated server to %q", mainGo)
+
+	fd, err := os.Create(mainGo)
 	if err != nil {
 		return err
 	}
@@ -227,12 +232,22 @@ func (me *siteBuilder) writeGenServer() error {
 }
 
 func (me *siteBuilder) writeSources() error {
+	debugf("Site builder writing sources")
+
 	simplates, err := me.walker.Simplates()
 	if err != nil {
 		return err
 	}
 
 	for simplate := range simplates {
+		if simplate == nil {
+			// assume `walker.Simplates()` assigned error to same address
+			// as one above?
+			return err
+		}
+
+		debugf("Site builder about to write source for %v simplate %q",
+			simplate.Type, simplate.Filename)
 		err := me.writeOneSource(simplate)
 		if err != nil {
 			return err
@@ -264,6 +279,8 @@ func (me *siteBuilder) indexSimplate(simplate *simplate) {
 func (me *siteBuilder) dumpSiteIndex() error {
 	idxPath := path.Join(me.WwwRoot, SiteIndexFilename)
 
+	debugf("Site builder dumping site index to %q", idxPath)
+
 	out, err := os.Create(idxPath)
 	if err != nil {
 		return err
@@ -288,6 +305,7 @@ func (me *siteBuilder) dumpSiteIndex() error {
 }
 
 func (me *siteBuilder) compileSources() error {
+	debugf("Site builder compiling sources")
 	origGopath := os.Getenv("GOPATH")
 	err := os.Setenv("GOPATH", fmt.Sprintf("%s:%s", me.OutputGopath, origGopath))
 	if err != nil {
@@ -338,14 +356,10 @@ func (me *siteBuilder) formatOneSource(sourceFile string) error {
 	return nil
 }
 
-func (me *siteBuilder) formatSources() error {
-	sources, err := me.sourcesList()
-	if err != nil {
-		return err
-	}
-
+func (me *siteBuilder) formatSources(sources []string) error {
+	debugf("Site builder formatting sources")
 	for _, source := range sources {
-		err = me.formatOneSource(source)
+		err := me.formatOneSource(source)
 		if err != nil {
 			return err
 		}
@@ -358,14 +372,32 @@ func (me *siteBuilder) sourcesList() ([]string, error) {
 	return filepath.Glob(path.Join(me.packagePath, "*.go"))
 }
 
+func (me *siteBuilder) ensureSourcesWritten() ([]string, error) {
+	sources, err := me.sourcesList()
+	if err != nil {
+		return sources, err
+	}
+
+	if len(sources) == 0 {
+		return sources, fmt.Errorf("No sources found in %q", me.packagePath)
+	}
+
+	return sources, nil
+}
+
 func (me *siteBuilder) Build() error {
 	err := me.writeSources()
 	if err != nil {
 		return err
 	}
 
+	sources, err := me.ensureSourcesWritten()
+	if err != nil {
+		return err
+	}
+
 	if me.Format {
-		err = me.formatSources()
+		err = me.formatSources(sources)
 		if err != nil {
 			return err
 		}
@@ -409,6 +441,8 @@ passed to BuildMain:
 
 */
 func BuildMain(cfg *SiteBuilderCfg) int {
+	SetDebug(cfg.Debug)
+
 	builder, err := newSiteBuilder(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)

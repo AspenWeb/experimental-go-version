@@ -40,15 +40,18 @@ func newTreeWalker(packageName, rootDir string) (*treeWalker, error) {
 }
 
 func (me *treeWalker) Simplates() (<-chan *simplate, error) {
+	var topErr error
 	schan := make(chan *simplate)
 
 	go func() {
-		filepath.Walk(me.Root,
+		err := filepath.Walk(me.Root,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					debugf("TreeWalker error:", err)
+					debugf("Tree walker error: %+v", err)
 					return nil
 				}
+
+				debugf("Tree walker checking path at %q", info.Name())
 
 				if info.IsDir() {
 					return nil
@@ -67,8 +70,15 @@ func (me *treeWalker) Simplates() (<-chan *simplate, error) {
 				schan <- smplt
 				return nil
 			})
+
+		if err != nil {
+			debugf("Tree walker error: %+v", err)
+			schan <- nil
+			*(&topErr) = err
+		}
+
 		close(schan)
 	}()
 
-	return (<-chan *simplate)(schan), nil
+	return (<-chan *simplate)(schan), topErr
 }

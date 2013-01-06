@@ -62,6 +62,8 @@ type simplatePageSpec struct {
 func newSimplateFromString(packageName,
 	siteRoot, filename, content string) (*simplate, error) {
 
+	debugf("Creating new simplate from string for "+
+		"SiteRoot:%q, Filename:%q", siteRoot, filename)
 	var err error
 	ext := path.Ext(filename)
 	hasExt := len(ext) > 0
@@ -88,9 +90,12 @@ func newSimplateFromString(packageName,
 		ContentType: mime.TypeByExtension(ext),
 	}
 
+	debugf("Built proto-simplate for %q with %v line breaks %+v",
+		filename, nbreaks, s)
+
 	if nbreaks == 1 || nbreaks == 2 {
 		if !hasExt {
-			return nil, fmt.Errorf("1 or 2 ^L found in simplate %q!  ",
+			return nil, fmt.Errorf("1 or 2 ^L found in simplate %q! "+
 				"Rendered simplates must have a file extension!", filename)
 		}
 
@@ -116,6 +121,7 @@ func newSimplateFromString(packageName,
 			s.TemplatePages = append(s.TemplatePages, templatePage)
 		}
 
+		debugf("Returning %v simplate %+v", s.Type, s)
 		return s, nil
 	}
 
@@ -145,9 +151,11 @@ func newSimplateFromString(packageName,
 			s.TemplatePages = append(s.TemplatePages, templatePage)
 		}
 
+		debugf("Returning %v simplate %+v", s.Type, s)
 		return s, nil
 	}
 
+	debugf("Returning %v simplate %+v", s.Type, s)
 	return s, nil
 }
 

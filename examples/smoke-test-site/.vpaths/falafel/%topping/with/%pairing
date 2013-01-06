@@ -10,6 +10,13 @@ func (me *excitedPairing) Sentiment() string {
     return fmt.Sprintf("%s!!!", me.pairing)
 }
 
-ctx["xp"] = &ExcitedPairing{pairing: ctx["pairing"]}
+if p, ok := ctx["pairing"].(string); ok {
+    ctx["xp"] = &excitedPairing{pairing: p}
+}
  text/plain
 I see you like your {{.topping}} with {{.xp.Sentiment}}
+ application/json
+{
+  "topping": "{{.topping}}",
+  "pairing": "{{.xp.Sentiment}}"
+}

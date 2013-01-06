@@ -220,6 +220,13 @@ func main() {
 			}()
 
 			defer func() {
+				defer func() {
+					err := recover()
+					if err != nil {
+						log.Println("ERROR:", err)
+					}
+				}()
+
 				time.Sleep(3000 * time.Millisecond)
 				srvCmd.Process.Kill()
 			}()

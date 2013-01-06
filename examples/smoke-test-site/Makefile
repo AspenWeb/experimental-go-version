@@ -9,6 +9,7 @@ smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
 clean:
 	rm -vf ./bin/goaspen_smoke_test-http-server
 	rm -rvf ./src/goaspen_smoke_test
+	rm -vf ./docroot/.goaspen-index.json
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
 
 prep:
