@@ -1,0 +1,15 @@
+import (
+    "fmt"
+)
+
+type excitedPairing struct {
+    pairing string
+}
+
+func (me *excitedPairing) Sentiment() string {
+    return fmt.Sprintf("%s!!!", me.pairing)
+}
+
+ctx["xp"] = &ExcitedPairing{pairing: ctx["pairing"]}
+ text/plain
+I see you like your {{.topping}} with {{.xp.Sentiment}}

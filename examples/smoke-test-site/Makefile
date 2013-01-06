@@ -11,8 +11,15 @@ clean:
 	rm -rvf ./src/goaspen_smoke_test
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
 
+prep:
+	if [ -n "$(GOASPEN_VPATHS)" ] ; then \
+		rsync -avz ./.vpaths/ ./docroot ; \
+	else \
+		git clean -xfd ./docroot ; \
+	fi
+
 docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:
 	mkdir -p docroot/Sandwich/Factory/meats\ and\ cheeses
 	curl -s http://en.wikipedia.org/wiki/Reuben_sandwich > "$@"
 
-.PHONY: smoke clean
+.PHONY: smoke clean prep

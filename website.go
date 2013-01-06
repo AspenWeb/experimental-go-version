@@ -351,6 +351,12 @@ func (me *websitePipelineHandler) registerAllHandlerFuncs() {
 	}
 }
 
+func (me *websitePipelineHandler) registerSpecialCases() {
+	idxPath := "/" + SiteIndexFilename
+	debugf("Registering special case of %q -> 404", idxPath)
+	http.HandleFunc(idxPath, serve404)
+}
+
 func (me *websitePipelineHandler) registerSelfAtRoot() {
 	debugf(`Registering pipeline handler at "/"`)
 	http.Handle("/", me)
@@ -509,6 +515,7 @@ func (me *Website) RunServer() error {
 	}
 
 	me.ph.registerAllHandlerFuncs()
+	me.ph.registerSpecialCases()
 	me.ph.registerSelfAtRoot()
 
 	return me.s.Run()

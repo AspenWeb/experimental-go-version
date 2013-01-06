@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	SiteIndexFilename   = ".goaspen-index.json"
 	DefaultGenPackage   = "goaspen_gen"
 	DefaultOutputGopath = ""
 	genServerTemplate   = template.Must(template.New("goaspen-genserver").Parse(`
@@ -261,7 +262,7 @@ func (me *siteBuilder) indexSimplate(simplate *simplate) {
 }
 
 func (me *siteBuilder) dumpSiteIndex() error {
-	idxPath := path.Join(me.WwwRoot, ".goaspen-index.json")
+	idxPath := path.Join(me.WwwRoot, SiteIndexFilename)
 
 	out, err := os.Create(idxPath)
 	if err != nil {
