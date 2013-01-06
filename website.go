@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -267,8 +268,8 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 		RequestPath: requestPathPattern,
 		HandlerFunc: handler,
 		Virtual:     isVirtual,
-		// All virtual are regexp, but not all regexp are virtual
-		Regexp: isVirtual,
+		Negotiated:  simplateType == SimplateTypeNegotiated,
+		Regexp:      isVirtual,
 
 		w: me.w,
 	})
@@ -286,6 +287,7 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 				RequestPath: reqPath,
 				HandlerFunc: handler,
 				Virtual:     isVirtual,
+				Negotiated:  simplateType == SimplateTypeNegotiated,
 				Regexp:      isVirtual,
 
 				w: me.w,
@@ -295,10 +297,9 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 		}
 	}
 
-	if !isDir && !strings.HasSuffix(requestPath, "/") && len(path.Ext(requestPath)) == 0 {
-		debugf("Registering %q as a negotiated simplate", requestPath)
-
+	if simplateType == SimplateTypeNegotiated {
 		pathRegexp := requestPathPattern + "\\.[^\\.]+"
+		debugf("Registering %q as a negotiated simplate", pathRegexp)
 
 		me.AddHandlerFunc(pathRegexp, &handlerFuncRegistration{
 			RequestPath: pathRegexp,
@@ -338,6 +339,16 @@ func (me *websitePipelineHandler) registerAllHandlerFuncs() {
 	debugf("Registering handler funcs!")
 
 	me.patternHandler.registerValidHandlerFuncs()
+
+	if isDebug {
+		debugf("All registered funcs:")
+
+		for requestPath, reg := range me.patternHandler.r {
+			if reg.RegWithNetHTTP {
+				debugf("    %q -> %+v", requestPath, reg)
+			}
+		}
+	}
 }
 
 func (me *websitePipelineHandler) registerSelfAtRoot() {
@@ -350,16 +361,18 @@ func (me *websitePatternHandler) registerValidHandlerFuncs() {
 	defer me.l.RUnlock()
 
 	for _, reg := range me.r {
-		registerHandlerFuncIfValid(reg)
+		reg.RegWithNetHTTP = registerHandlerFuncIfValid(reg)
 	}
 }
 
-func registerHandlerFuncIfValid(reg *handlerFuncRegistration) {
+func registerHandlerFuncIfValid(reg *handlerFuncRegistration) bool {
 	if !reg.Regexp {
 		http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
-	} else {
-		debugf("NOT registering handler func for %q with net/http", reg.RequestPath)
+		return true
 	}
+
+	debugf("NOT registering handler func for %q with net/http", reg.RequestPath)
+	return false
 }
 
 func (me *Website) Configure(serverBind, wwwRoot, charsetDynamic,
@@ -374,8 +387,19 @@ func (me *Website) Configure(serverBind, wwwRoot, charsetDynamic,
 	me.ListDirs = listDirs
 	me.Debug = debug
 
+	sortedIndices := make([]string, len(me.Indices))
+	copy(sortedIndices, me.Indices)
+	sort.Strings(sortedIndices)
+
 	for _, part := range strings.Split(indices, ",") {
-		me.Indices = append(me.Indices, strings.TrimSpace(part))
+		trimmed := strings.TrimSpace(part)
+		if sort.SearchStrings(sortedIndices, trimmed) > -1 {
+			debugf("*NOT* appending duplicate index name %q into %v",
+				trimmed, me.Indices)
+		} else {
+			debugf("Adding index name %q to %v", trimmed, me.Indices)
+			me.Indices = append(me.Indices, trimmed)
+		}
 	}
 
 	if me.s == nil {
@@ -400,6 +424,8 @@ func (me *websitePipelineHandler) injectCustomHeaders(req *http.Request) {
 	me.updateNegType(req, req.URL.Path)
 	req.Header.Set("X-GoAspen-PackageName", me.w.PackageName)
 	req.Header.Set("X-GoAspen-WwwRoot", me.w.WwwRoot)
+	req.Header.Set("X-GoAspen-CharsetStatic", me.w.CharsetStatic)
+	req.Header.Set("X-GoAspen-CharsetDynamic", me.w.CharsetDynamic)
 }
 
 func (me *websitePipelineHandler) updateNegType(req *http.Request, filename string) {
@@ -417,6 +443,17 @@ func (me *websitePatternHandler) NextHandler() pipelineHandler {
 
 func (me *websitePatternHandler) AddHandlerFunc(requestPath string,
 	r *handlerFuncRegistration) {
+
+	if r.Negotiated && !r.Regexp {
+		debugf("Intercepting non-regexp negotiated registration for %q, "+
+			"replacing with 404 handler", requestPath)
+		r = &handlerFuncRegistration{
+			RequestPath: requestPath,
+			HandlerFunc: serve404,
+
+			w: me.w,
+		}
+	}
 
 	debugf("Adding handler func registration for %q: %+v", requestPath, r)
 
@@ -463,7 +500,7 @@ func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	}
 
 	debugf("Pattern handler falling through to 404 because next handler is %v", h)
-	serve404(w, req, me.w.CharsetDynamic)
+	serve404(w, req)
 }
 
 func (me *Website) RunServer() error {

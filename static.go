@@ -66,7 +66,7 @@ func (me *websiteStaticHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 	}
 
 	debugf("Falling through to 404 for %q!", req.URL.Path)
-	serve404(w, req, me.w.CharsetDynamic)
+	serve404(w, req)
 }
 
 func (me *websiteStaticHandler) serveStatic(w http.ResponseWriter, req *http.Request) error {

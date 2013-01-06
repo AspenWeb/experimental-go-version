@@ -12,11 +12,12 @@ const (
 )
 
 type handlerFuncRegistration struct {
-	RequestPath string
-	HandlerFunc http.HandlerFunc
-	Negotiated  bool
-	Virtual     bool
-	Regexp      bool
+	RequestPath    string
+	HandlerFunc    http.HandlerFunc
+	Negotiated     bool
+	Virtual        bool
+	Regexp         bool
+	RegWithNetHTTP bool
 
 	w *Website
 }
@@ -47,7 +48,12 @@ func UpdateContextFromVirtualPaths(ctx *map[string]interface{},
 	}
 }
 
-func serve404(w http.ResponseWriter, req *http.Request, charset string) {
+func serve404(w http.ResponseWriter, req *http.Request) {
+	charset := req.Header.Get("X-GoAspen-CharsetDynamic")
+	if len(charset) == 0 {
+		charset = "utf-8"
+	}
+
 	w.Header().Set("Content-Type", fmt.Sprintf("text/html; charset=%v", charset))
 	w.WriteHeader(http.StatusNotFound)
 	w.Write(http404Response)

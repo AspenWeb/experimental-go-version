@@ -13,15 +13,19 @@ func configure(website *Website) *Website {
 	return website
 }
 
+func debugf(format string, v ...interface{}) {
+	fmt.Fprintf(os.Stderr, "web-config.go:DEBUG: "+format+"\n", v...)
+}
+
 func main() {
-	fmt.Fprintf(os.Stderr, "web-config.go: DEBUG: called!\n")
+	debugf("called!")
 
 	website := MustLoadWebsite()
-	fmt.Fprintf(os.Stderr, "web-config.go: DEBUG: loaded website %+v\n", website)
+	debugf("loaded website %+v", website)
 
 	website = configure(website)
 
-	fmt.Fprintf(os.Stderr, "web-config.go: DEBUG: dumping website %+v\n", website)
+	debugf("dumping website %+v", website)
 	MustDumpWebsite(website)
 	os.Exit(0)
 }
