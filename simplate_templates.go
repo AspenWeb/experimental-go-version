@@ -34,7 +34,7 @@ import (
 func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, request *http.Request) {
     var err error
     website := local{{.FuncName}}Website
-    website.DebugNewRequest(request)
+    website.DebugNewRequest("{{.AbsFilename}}", request)
 
     response := website.NewHTTPResponseWrapper(w, request)
 
