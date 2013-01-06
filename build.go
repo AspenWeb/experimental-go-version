@@ -160,7 +160,7 @@ func newSiteBuilder(cfg *SiteBuilderCfg) (*siteBuilder, error) {
 		},
 	}
 
-	debugf("initialized site builder: %+v from cfg %+v", sb, cfg)
+	debugf("Initialized site builder: %+v from cfg %+v", sb, cfg)
 
 	return sb, nil
 }

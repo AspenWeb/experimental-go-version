@@ -116,10 +116,10 @@ func main() {
 	optarg.Add("P", "package_name", "Generated source package name", genPkg)
 	optarg.Add("o", "output_path",
 		"Output GOPATH base for generated sources", outPath)
-	optarg.Add("F", "format", "Format generated sources", format)
+	optarg.Add("F", "format", "Format generated sources", "")
 	optarg.Add("m", "make_outdir",
 		"Make output GOPATH base if not exists", mkOutDir)
-	optarg.Add("C", "compile", "Compile generated sources", compile)
+	optarg.Add("C", "compile", "Compile generated sources", "")
 	optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
 		"changes to configuration files and document root files will cause "+
 		"simplates to rebuild, then re-exec the generated server binary "+
@@ -152,6 +152,8 @@ func main() {
 			value := opt.Bool()
 			runServer = value
 			compile = value
+		case "compile":
+			compile = opt.Bool()
 		case "charset_dynamic":
 			charsetDynamic = opt.String()
 		case "charset_static":
