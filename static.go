@@ -69,6 +69,10 @@ func (me *websiteStaticHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 	serve404(w, req)
 }
 
+func (me *websiteStaticHandler) String() string {
+	return fmt.Sprintf("*websiteStaticHandler{w.WwwRoot: %q}", me.w.WwwRoot)
+}
+
 func (me *websiteStaticHandler) serveStatic(w http.ResponseWriter, req *http.Request) error {
 	fullPath, err := me.findStaticPath(req)
 	if err != nil {

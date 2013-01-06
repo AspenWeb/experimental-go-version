@@ -59,13 +59,26 @@ type Website struct {
 type pipelineHandler interface {
 	http.Handler
 	NextHandler() pipelineHandler
+	String() string
 }
 
 type websitePipelineHandler struct {
 	w *Website
 
-	nh             pipelineHandler
-	patternHandler *websitePatternHandler
+	nh pipelineHandler
+	r  map[string]*handlerFuncRegistration
+	l  sync.RWMutex
+
+	patternHandler  *websitePatternHandler
+	strMatchHandler *websiteStringMatchHandler
+}
+
+type websiteStringMatchHandler struct {
+	w *Website
+
+	nh pipelineHandler
+	r  map[string]*handlerFuncRegistration
+	l  sync.RWMutex
 }
 
 type websitePatternHandler struct {
@@ -123,13 +136,20 @@ func DeclareWebsite(packageName string) *Website {
 		c:  map[string]*regexp.Regexp{},
 		nh: staticHandler,
 	}
-	ph := &websitePipelineHandler{
+	strMatchHandler := &websiteStringMatchHandler{
 		w: newSite,
+		r: map[string]*handlerFuncRegistration{},
 
 		nh: patternHandler,
 	}
+	ph := &websitePipelineHandler{
+		w: newSite,
+
+		nh: strMatchHandler,
+	}
 
 	ph.patternHandler = patternHandler
+	ph.strMatchHandler = strMatchHandler
 	newSite.ph = ph
 
 	websites[packageName] = newSite
@@ -243,28 +263,32 @@ func (me *websitePipelineHandler) NewHandlerFuncRegistration(requestPath,
 
 	debugf("NewHandlerFuncRegistration(%q, %q, <func>, %v)", requestPath, simplateType, isDir)
 
-	return me.patternHandler.newHandlerFuncRegistration(requestPath,
+	isVirtual := vPathPart.MatchString(requestPath)
+	debugf("Setting `Virtual` to %v for %q", isVirtual, requestPath)
+
+	if isVirtual || simplateType == SimplateTypeNegotiated {
+		return me.patternHandler.newHandlerFuncRegistration(requestPath,
+			simplateType, handler, isDir, isVirtual)
+	}
+
+	return me.strMatchHandler.newHandlerFuncRegistration(requestPath,
 		simplateType, handler, isDir)
 }
 
 func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
-	simplateType string, handler http.HandlerFunc, isDir bool) *handlerFuncRegistration {
+	simplateType string, handler http.HandlerFunc,
+	isDir, isVirtual bool) *handlerFuncRegistration {
 
 	if len(requestPath) < 1 {
 		panic(fmt.Errorf("Invalid request path %q", requestPath))
 	}
-
-	pathBase := path.Base(requestPath)
-	pathDir := path.Dir(requestPath)
-	isVirtual := vPathPart.MatchString(requestPath)
-	debugf("Setting `Virtual` to %v for %q", isVirtual, requestPath)
 
 	requestPathPattern := requestPath
 	if isVirtual {
 		requestPathPattern = virtualToRegexp(requestPath)
 	}
 
-	me.AddHandlerFunc(requestPath, &handlerFuncRegistration{
+	me.AddHandlerFuncReg(requestPath, &handlerFuncRegistration{
 		RequestPath: requestPathPattern,
 		HandlerFunc: handler,
 		Virtual:     isVirtual,
@@ -274,34 +298,11 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 		w: me.w,
 	})
 
-	debugf("Checking if %q matches any of %v", pathBase, me.w.Indices)
-
-	for _, idx := range me.w.Indices {
-		if pathBase == idx {
-			// net/http will automatically add a redirect from "pathDir" if
-			// we register with a trailing slash.
-			reqPath := pathDir + "/"
-			debugf("Registering %q with same handler as %q", reqPath, pathBase)
-
-			reg := &handlerFuncRegistration{
-				RequestPath: reqPath,
-				HandlerFunc: handler,
-				Virtual:     isVirtual,
-				Negotiated:  simplateType == SimplateTypeNegotiated,
-				Regexp:      isVirtual,
-
-				w: me.w,
-			}
-
-			me.AddHandlerFunc(reqPath, reg)
-		}
-	}
-
 	if simplateType == SimplateTypeNegotiated {
 		pathRegexp := requestPathPattern + "\\.[^\\.]+"
 		debugf("Registering %q as a negotiated simplate", pathRegexp)
 
-		me.AddHandlerFunc(pathRegexp, &handlerFuncRegistration{
+		me.AddHandlerFuncReg(pathRegexp, &handlerFuncRegistration{
 			RequestPath: pathRegexp,
 			HandlerFunc: handler,
 			Negotiated:  true,
@@ -313,6 +314,50 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 	}
 
 	return me.HandlerFuncAt(requestPath)
+}
+
+func (me *websiteStringMatchHandler) newHandlerFuncRegistration(requestPath,
+	simplateType string, handler http.HandlerFunc,
+	isDir bool) *handlerFuncRegistration {
+
+	if simplateType == SimplateTypeNegotiated {
+		debugf("Ignoring negotiated simplate registration for %q", requestPath)
+		return nil
+	}
+
+	pathBase := path.Base(requestPath)
+	pathDir := path.Dir(requestPath)
+
+	debugf("Checking if %q matches any of %v", pathBase, me.w.Indices)
+
+	var reg *handlerFuncRegistration
+
+	for _, idx := range me.w.Indices {
+		if pathBase == idx {
+			reqPath := pathDir + "/"
+
+			reg = &handlerFuncRegistration{
+				RequestPath: reqPath,
+				HandlerFunc: handler,
+
+				w: me.w,
+			}
+
+			debugf("Registering %q with same handler as %q", reqPath, pathBase)
+			me.AddHandlerFuncReg(pathDir, &handlerFuncRegistration{
+				RequestPath: pathDir,
+				HandlerFunc: func(w http.ResponseWriter, req *http.Request) {
+					h := http.RedirectHandler(reqPath, http.StatusMovedPermanently)
+					h.ServeHTTP(w, req)
+				},
+
+				w: me.w,
+			})
+			me.AddHandlerFuncReg(reqPath, reg)
+		}
+	}
+
+	return reg
 }
 
 func virtualToRegexp(requestPath string) string {
@@ -335,50 +380,18 @@ func findHighestNormalDir(requestPath string) string {
 	return "/"
 }
 
-func (me *websitePipelineHandler) registerAllHandlerFuncs() {
-	debugf("Registering handler funcs!")
-
-	me.patternHandler.registerValidHandlerFuncs()
-
-	if isDebug {
-		debugf("All registered funcs:")
-
-		for requestPath, reg := range me.patternHandler.r {
-			if reg.RegWithNetHTTP {
-				debugf("    %q -> %+v", requestPath, reg)
-			}
-		}
-	}
-}
-
 func (me *websitePipelineHandler) registerSpecialCases() {
 	idxPath := "/" + SiteIndexFilename
 	debugf("Registering special case of %q -> 404", idxPath)
-	http.HandleFunc(idxPath, serve404)
+	me.strMatchHandler.AddHandlerFuncReg(idxPath, &handlerFuncRegistration{
+		RequestPath: idxPath,
+		HandlerFunc: serve404,
+	})
 }
 
 func (me *websitePipelineHandler) registerSelfAtRoot() {
 	debugf(`Registering pipeline handler at "/"`)
 	http.Handle("/", me)
-}
-
-func (me *websitePatternHandler) registerValidHandlerFuncs() {
-	me.l.RLock()
-	defer me.l.RUnlock()
-
-	for _, reg := range me.r {
-		reg.RegWithNetHTTP = registerHandlerFuncIfValid(reg)
-	}
-}
-
-func registerHandlerFuncIfValid(reg *handlerFuncRegistration) bool {
-	if !reg.Regexp {
-		http.HandleFunc(reg.RequestPath, reg.HandlerFunc)
-		return true
-	}
-
-	debugf("NOT registering handler func for %q with net/http", reg.RequestPath)
-	return false
 }
 
 func (me *Website) Configure(serverBind, wwwRoot, charsetDynamic,
@@ -422,8 +435,19 @@ func (me *websitePipelineHandler) NextHandler() pipelineHandler {
 
 func (me *websitePipelineHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	me.injectCustomHeaders(req)
-	debugf("Pipeline handler sending %q to pattern handler", req.URL.Path)
-	me.patternHandler.ServeHTTP(w, req)
+
+	h := me.NextHandler()
+	if h != nil {
+		debugf("Pipeline handler sending %q to %s", req.URL.Path, h)
+		h.ServeHTTP(w, req)
+	}
+}
+
+func (me *websitePipelineHandler) String() string {
+	return fmt.Sprintf("*websitePipelineHandler{"+
+		"patternHandler: %s, "+
+		"strMatchHandler: %s, "+
+		"r: %+v}", me.patternHandler, me.strMatchHandler, me.r)
 }
 
 func (me *websitePipelineHandler) injectCustomHeaders(req *http.Request) {
@@ -447,7 +471,7 @@ func (me *websitePatternHandler) NextHandler() pipelineHandler {
 	return me.nh
 }
 
-func (me *websitePatternHandler) AddHandlerFunc(requestPath string,
+func (me *websitePatternHandler) AddHandlerFuncReg(requestPath string,
 	r *handlerFuncRegistration) {
 
 	if r.Negotiated && !r.Regexp {
@@ -509,14 +533,65 @@ func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	serve404(w, req)
 }
 
+func (me *websitePatternHandler) String() string {
+	return fmt.Sprintf("*websitePatternHandler{r: %v}", me.r)
+}
+
+func (me *websiteStringMatchHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	reg := me.match(req.URL.Path)
+
+	if reg != nil {
+		reg.HandlerFunc(w, req)
+		return
+	}
+
+	me.NextHandler().ServeHTTP(w, req)
+	return
+}
+
+func (me *websiteStringMatchHandler) String() string {
+	return fmt.Sprintf("*websiteStringMatchHandler{r: %v}", me.r)
+}
+
+func (me *websiteStringMatchHandler) NextHandler() pipelineHandler {
+	return me.nh
+}
+
+func (me *websiteStringMatchHandler) AddHandlerFuncReg(requestPath string,
+	reg *handlerFuncRegistration) {
+
+	me.l.RLock()
+	defer me.l.RUnlock()
+
+	me.r[requestPath] = reg
+}
+
+func (me *websiteStringMatchHandler) match(requestPath string) *handlerFuncRegistration {
+	var h *handlerFuncRegistration
+
+	n := 0
+	for k, v := range me.r {
+		if !pathMatch(k, requestPath) {
+			continue
+		}
+
+		if h == nil || len(k) > n {
+			n = len(k)
+			h = v
+		}
+	}
+
+	return h
+}
+
 func (me *Website) RunServer() error {
 	if !me.configured {
 		return fmt.Errorf("Can't run the server when we aren't configured!")
 	}
 
-	me.ph.registerAllHandlerFuncs()
 	me.ph.registerSpecialCases()
 	me.ph.registerSelfAtRoot()
+	debugf("Website about to run server with pipeline:\n\t%s", me.ph)
 
 	return me.s.Run()
 }
