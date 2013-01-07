@@ -288,6 +288,23 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 		requestPathPattern = virtualToRegexp(requestPath)
 	}
 
+	if simplateType == SimplateTypeNegotiated {
+		pathRegexp := requestPathPattern + "\\.[^\\.]+"
+		debugf("Registering %q as a negotiated simplate", pathRegexp)
+
+		me.AddHandlerFuncReg(requestPath, &handlerFuncRegistration{
+			RequestPath: pathRegexp,
+			HandlerFunc: handler,
+			Negotiated:  true,
+			Virtual:     isVirtual,
+			Regexp:      true,
+
+			w: me.w,
+		})
+
+		return me.HandlerFuncAt(requestPath)
+	}
+
 	me.AddHandlerFuncReg(requestPath, &handlerFuncRegistration{
 		RequestPath: requestPathPattern,
 		HandlerFunc: handler,
@@ -297,21 +314,6 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 
 		w: me.w,
 	})
-
-	if simplateType == SimplateTypeNegotiated {
-		pathRegexp := requestPathPattern + "\\.[^\\.]+"
-		debugf("Registering %q as a negotiated simplate", pathRegexp)
-
-		me.AddHandlerFuncReg(pathRegexp, &handlerFuncRegistration{
-			RequestPath: pathRegexp,
-			HandlerFunc: handler,
-			Negotiated:  true,
-			Virtual:     isVirtual,
-			Regexp:      true,
-
-			w: me.w,
-		})
-	}
 
 	return me.HandlerFuncAt(requestPath)
 }
@@ -361,23 +363,7 @@ func (me *websiteStringMatchHandler) newHandlerFuncRegistration(requestPath,
 }
 
 func virtualToRegexp(requestPath string) string {
-	return vPathPart.ReplaceAllString(requestPath, "(?P<$1>[a-zA-Z_][-a-zA-Z0-9_]*)")
-}
-
-func findHighestNormalDir(requestPath string) string {
-	if strings.Contains(requestPath, "%") {
-		parts := strings.SplitN(requestPath, "%", 2)
-		if len(parts[0]) > 1 {
-			return parts[0]
-		}
-	}
-
-	parts := strings.SplitN(requestPath, "\\", 2)
-	if len(parts[0]) > 1 && strings.HasSuffix(parts[0], "/") {
-		return parts[0]
-	}
-
-	return "/"
+	return vPathPart.ReplaceAllString(requestPath, vPathPartRep)
 }
 
 func (me *websitePipelineHandler) registerSpecialCases() {
@@ -495,7 +481,7 @@ func (me *websitePatternHandler) AddHandlerFuncReg(requestPath string,
 		return
 	}
 
-	me.c[requestPath] = regexp.MustCompile(requestPath)
+	me.c[requestPath] = regexp.MustCompile(r.RequestPath)
 
 	debugf("Setting handler for %q", requestPath)
 	me.r[requestPath] = r
@@ -510,13 +496,14 @@ func (me *websitePatternHandler) HandlerFuncAt(requestPath string) *handlerFuncR
 }
 
 func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqPathBytes := []byte(req.URL.Path)
-
 	debugf("Pattern handler looking for registration that matches %q", req.URL.Path)
 
+	// Loop through the non-regexp request paths and their registrations.
 	for requestPath, reg := range me.r {
+		// Get the compiled regexp for the registered request path, and if the
+		// incoming request URL Path matches, call the regitration's HandlerFunc.
 		re := me.c[requestPath]
-		if re.Match(reqPathBytes) {
+		if re.MatchString(req.URL.Path) {
 			reg.HandlerFunc(w, req)
 			return
 		}
@@ -524,7 +511,7 @@ func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 
 	h := me.NextHandler()
 	if h != nil {
-		debugf("Pattern handler falling through to next handler")
+		debugf("Pattern handler falling through to %s", h)
 		h.ServeHTTP(w, req)
 		return
 	}
@@ -535,6 +522,14 @@ func (me *websitePatternHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 
 func (me *websitePatternHandler) String() string {
 	return fmt.Sprintf("*websitePatternHandler{r: %v}", me.r)
+}
+
+func (me *websitePatternHandler) findVpathRegexp(vPathString string) *regexp.Regexp {
+	if re, ok := me.c[vPathString]; ok {
+		return re
+	}
+
+	return nil
 }
 
 func (me *websiteStringMatchHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -584,6 +579,34 @@ func (me *websiteStringMatchHandler) match(requestPath string) *handlerFuncRegis
 	return h
 }
 
+func (me *Website) UpdateContextFromVirtualPaths(ctx *map[string]interface{},
+	requestPath, vPathString string) {
+
+	// FIXME Demeter!
+	vPath := me.ph.patternHandler.findVpathRegexp(vPathString)
+	if vPath == nil {
+		debugf("No matching regexp for vpath %q.  Not updating context.",
+			vPathString)
+		return
+	}
+
+	matches := vPath.FindStringSubmatch(requestPath)
+	if len(matches) == 0 {
+		debugf("Request path %q does not match %q.  Not updating context.",
+			requestPath, vPath.String())
+		return
+	}
+
+	realCtx := *ctx
+
+	names := vPath.SubexpNames()
+	for i, match := range matches {
+		if len(names[i]) > 0 {
+			realCtx[names[i]] = match
+		}
+	}
+}
+
 func (me *Website) RunServer() error {
 	if !me.configured {
 		return fmt.Errorf("Can't run the server when we aren't configured!")
@@ -591,7 +614,20 @@ func (me *Website) RunServer() error {
 
 	me.ph.registerSpecialCases()
 	me.ph.registerSelfAtRoot()
-	debugf("Website about to run server with pipeline:\n\t%s", me.ph)
+
+	if isDebug {
+		debugf("Website about to run server with pipeline:\n\t%s", me.ph)
+
+		debugf("String matches registered:")
+		for m, _ := range me.ph.strMatchHandler.r {
+			debugf("    %s", m)
+		}
+
+		debugf("Patterns registered:")
+		for _, re := range me.ph.patternHandler.c {
+			debugf("    %s", re)
+		}
+	}
 
 	return me.s.Run()
 }

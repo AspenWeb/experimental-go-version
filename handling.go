@@ -3,12 +3,18 @@ package goaspen
 import (
 	"fmt"
 	"net/http"
-	"strings"
+	"regexp"
 )
 
 const (
 	internalAcceptHeader = "X-GoAspen-Accept"
 	pathTransHeader      = "X-HTTP-Path-Translated"
+)
+
+var (
+	vPathPart    = regexp.MustCompile("%([a-zA-Z_][-a-zA-Z0-9_]*)")
+	vPathPartRep = "(?P<$1>[a-zA-Z_][-a-zA-Z0-9_]*)"
+	nonAlNumDash = regexp.MustCompile("[^-a-zA-Z0-9]")
 )
 
 type handlerFuncRegistration struct {
@@ -19,32 +25,6 @@ type handlerFuncRegistration struct {
 	Regexp      bool
 
 	w *Website
-}
-
-func UpdateContextFromVirtualPaths(ctx *map[string]interface{},
-	requestPath, vPath string) {
-
-	realCtx := *ctx
-
-	rpParts := strings.Split(requestPath, "/")
-	vpParts := strings.Split(vPath, "/")
-
-	if len(rpParts) != len(vpParts) {
-		debugf("Request and virtual paths have different "+
-			"part counts, so not updating request context: %q, %q",
-			requestPath, vPath)
-		return
-	}
-
-	for i, vPart := range vpParts {
-		if len(vPart) < 1 {
-			continue
-		}
-
-		if vPart[0] == '%' {
-			realCtx[vPart[1:]] = rpParts[i]
-		}
-	}
 }
 
 func serve404(w http.ResponseWriter, req *http.Request) {

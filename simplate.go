@@ -6,7 +6,6 @@ import (
 	"mime"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
 )
@@ -32,8 +31,6 @@ var (
 		SimplateTypeStatic:     nil,
 	}
 	defaultRenderer = "#!go/text/template"
-	nonAlNumDash    = regexp.MustCompile("[^-a-zA-Z0-9]")
-	vPathPart       = regexp.MustCompile("%([a-zA-Z_][-a-zA-Z0-9_]*)")
 )
 
 type simplate struct {

@@ -763,24 +763,3 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 			serverBinary, (os.FileMode)(0750), fi.Mode())
 	}
 }
-
-func TestUpdatesContextFromVirtualPaths(t *testing.T) {
-	ctx := map[string]interface{}{}
-
-	bar := fmt.Sprintf("%v", rand.Int())
-	hamster := fmt.Sprintf("%v", rand.Int())
-
-	UpdateContextFromVirtualPaths(&ctx,
-		fmt.Sprintf("/foo/%v/%v/dance", bar, hamster),
-		"/foo/%bar/%hamster/dance")
-
-	if value, ok := ctx["bar"]; !ok || value != bar {
-		t.Errorf("\"bar\" != %q: %v", bar, value)
-		return
-	}
-
-	if value, ok := ctx["hamster"]; !ok || value != hamster {
-		t.Errorf("\"hamster\" != %q: %v", hamster, value)
-		return
-	}
-}

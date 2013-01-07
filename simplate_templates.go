@@ -40,7 +40,7 @@ func SimplateHandlerFunc{{.FuncName}}(w http.ResponseWriter, request *http.Reque
 
     __file__ := "{{.AbsFilename}}"
     ctx := map[string]interface{}{}
-    goaspen.UpdateContextFromVirtualPaths(&ctx, request.URL.Path, "/{{.Filename}}")
+    website.UpdateContextFromVirtualPaths(&ctx, request.URL.Path, "/{{.Filename}}")
 
     {{.LogicPage.Body}}
 `

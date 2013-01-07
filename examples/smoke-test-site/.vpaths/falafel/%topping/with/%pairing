@@ -14,7 +14,7 @@ if p, ok := ctx["pairing"].(string); ok {
     ctx["xp"] = &excitedPairing{pairing: p}
 }
  text/plain
-I see you like your {{.topping}} with {{.xp.Sentiment}}
+I see you like your falafel with {{.topping}} and {{.xp.Sentiment}}
  application/json
 {
   "topping": "{{.topping}}",
