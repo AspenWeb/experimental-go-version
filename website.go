@@ -266,18 +266,32 @@ func (me *websitePipelineHandler) NewHandlerFuncRegistration(requestPath,
 	isVirtual := vPathPart.MatchString(requestPath)
 	debugf("Setting `Virtual` to %v for %q", isVirtual, requestPath)
 
-	if isVirtual || simplateType == SimplateTypeNegotiated {
-		return me.patternHandler.newHandlerFuncRegistration(requestPath,
+	if simplateType == SimplateTypeNegotiated {
+		// directly add a 404 for the non-pattern path, which may be tho wrong
+		// behavior, but at least we aren't serving the simplate source.
+		me.strMatchHandler.AddHandlerFuncReg(requestPath,
+			&handlerFuncRegistration{
+				RequestPath: requestPath,
+				HandlerFunc: serve404,
+			})
+		return me.patternHandler.NewHandlerFuncRegistration(requestPath,
 			simplateType, handler, isDir, isVirtual)
 	}
 
-	return me.strMatchHandler.newHandlerFuncRegistration(requestPath,
+	if isVirtual {
+		return me.patternHandler.NewHandlerFuncRegistration(requestPath,
+			simplateType, handler, isDir, isVirtual)
+	}
+
+	return me.strMatchHandler.NewHandlerFuncRegistration(requestPath,
 		simplateType, handler, isDir)
 }
 
-func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
+func (me *websitePatternHandler) NewHandlerFuncRegistration(requestPath,
 	simplateType string, handler http.HandlerFunc,
 	isDir, isVirtual bool) *handlerFuncRegistration {
+
+	debugf("Pattern handler checking if %q can be registered", requestPath)
 
 	if len(requestPath) < 1 {
 		panic(fmt.Errorf("Invalid request path %q", requestPath))
@@ -318,7 +332,7 @@ func (me *websitePatternHandler) newHandlerFuncRegistration(requestPath,
 	return me.HandlerFuncAt(requestPath)
 }
 
-func (me *websiteStringMatchHandler) newHandlerFuncRegistration(requestPath,
+func (me *websiteStringMatchHandler) NewHandlerFuncRegistration(requestPath,
 	simplateType string, handler http.HandlerFunc,
 	isDir bool) *handlerFuncRegistration {
 
@@ -533,14 +547,25 @@ func (me *websitePatternHandler) findVpathRegexp(vPathString string) *regexp.Reg
 }
 
 func (me *websiteStringMatchHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	debugf("String match handler looking for registration that matches %q",
+		req.URL.Path)
 	reg := me.match(req.URL.Path)
 
 	if reg != nil {
+		debugf("String match handler found match! %+v", reg)
 		reg.HandlerFunc(w, req)
 		return
 	}
 
-	me.NextHandler().ServeHTTP(w, req)
+	h := me.NextHandler()
+	if h != nil {
+		debugf("String match handler falling through to %+v", h)
+		h.ServeHTTP(w, req)
+		return
+	}
+
+	debugf("String match handler falling through to 404")
+	serve404(w, req)
 	return
 }
 
@@ -558,6 +583,8 @@ func (me *websiteStringMatchHandler) AddHandlerFuncReg(requestPath string,
 	me.l.RLock()
 	defer me.l.RUnlock()
 
+	debugf("String match handler adding func reg at %q: %+v",
+		requestPath, reg)
 	me.r[requestPath] = reg
 }
 
@@ -576,6 +603,7 @@ func (me *websiteStringMatchHandler) match(requestPath string) *handlerFuncRegis
 		}
 	}
 
+	debugf("String match handler 'match' returning %+v", h)
 	return h
 }
 
