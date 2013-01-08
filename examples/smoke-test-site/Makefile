@@ -13,7 +13,7 @@ clean:
 	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
 
 prep:
-	if [ -n "$(GOASPEN_VPATHS)" ] ; then \
+	if [ -z "$(GOASPEN_NOVPATHS)" ] ; then \
 		rsync -avz ./.vpaths/ ./docroot ; \
 	else \
 		git clean -xfd ./docroot ; \
