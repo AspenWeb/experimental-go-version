@@ -5,13 +5,13 @@ TARGETS = \
 	github.com/meatballhat/goaspen/goaspen-build
 
 test: build
-	go test -x -v $(LIBRARIES)
+	go test -x -v $(GOFLAGS) $(LIBRARIES)
 
 build: deps
-	go install -x $(TARGETS)
+	go install -x $(GOFLAGS) $(TARGETS)
 
 deps:
-	go get -n -x $(TARGETS)
+	go get -n -x $(GOFLAGS) $(TARGETS)
 
 clean:
 	go clean -x -i $(TARGETS)

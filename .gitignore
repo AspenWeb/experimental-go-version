@@ -1,3 +1,4 @@
+/.env
 /examples/smoke-test-site/bin/
 /examples/smoke-test-site/src/
 /examples/smoke-test-site/docroot/.goaspen-index.json
