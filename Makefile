@@ -19,4 +19,7 @@ clean:
 smoke: test
 	$(MAKE) -C examples/smoke-test-site clean prep smoke
 
+smoke-serve: test
+	$(MAKE) -C examples/smoke-test-site clean prep serve
+
 .PHONY: test build deps clean smoke

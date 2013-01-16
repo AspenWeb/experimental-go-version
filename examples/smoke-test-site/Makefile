@@ -1,6 +1,10 @@
 smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
 	./smoke-suite
 
+serve:
+	./build
+	./bin/goaspen_smoke_test-http-server
+
 clean:
 	rm -vf ./bin/goaspen_smoke_test-http-server
 	rm -rvf ./src/goaspen_smoke_test
@@ -18,4 +22,4 @@ docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:
 	mkdir -p docroot/Sandwich/Factory/meats\ and\ cheeses
 	curl -s http://en.wikipedia.org/wiki/Reuben_sandwich > "$@"
 
-.PHONY: smoke clean prep
+.PHONY: smoke serve clean prep

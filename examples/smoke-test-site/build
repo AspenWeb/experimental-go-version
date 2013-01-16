@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ -n "$(uname -a | grep -i ^linux)" ] ; then
+    HERE="$(dirname $(readlink -f $0))"
+else
+    HERE="$(dirname $0)"
+fi
+
+export GOASPEN_CONFIGURATION_SCRIPTS="${GOASPEN_CONFIGURATION_SCRIPTS:-"$HERE/web-config.go"}"
+export DEBUG="${DEBUG:-1}"
+export GOPATH="$HERE:$GOPATH"
+
+exec goaspen-build \
+    -w "$HERE/docroot" \
+    -P goaspen_smoke_test \
+    --indices +default.htm \
+    --list_directories "$@"
