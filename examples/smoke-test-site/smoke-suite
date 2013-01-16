@@ -1,0 +1,63 @@
+#!/bin/bash
+
+if [ -n "$(uname -a | grep -i ^linux)" ] ; then
+    HERE="$(dirname $(readlink -f $0))"
+else
+    HERE="$(dirname $0)"
+fi
+
+SERVER_PID=""
+URL_BASE="http://localhost:9182"
+
+export GOASPEN_CONFIGURATION_SCRIPTS="$HERE/web-config.go"
+export DEBUG=1
+export GOPATH="$HERE:$GOPATH"
+
+function curl_check200() {
+    echo -n "$1 "
+    curl -s -i "$URL_BASE${1}" | head -1 | awk '{ print $2 }' | grep 200
+}
+
+trap "test -n \"$SERVER_PID\" && kill -9 $SERVER_PID" 1 2 3 15
+
+goaspen-build \
+    -w "$HERE/docroot" \
+    -P goaspen_smoke_test \
+    --indices +default.htm \
+    --list_directories \
+    -x \
+    -s \
+    --changes_reload >>$HERE/smoke-server.log 2>&1 &
+
+SERVER_PID="$!"
+
+sleep 5
+
+set -e
+set -o pipefail
+# --------------------------------------------------------
+
+curl_check200 /
+curl_check200 /falafel/
+curl_check200 /falafel/parsley/with/yogurt.txt
+curl_check200 /falafel/garlic/with/sardines.json
+curl_check200 /flurb.json
+curl_check200 /octo.txt
+curl_check200 /octo.xml
+curl_check200 /octo.json
+curl_check200 /octo.html
+curl_check200 /octo.css
+curl_check200 /octo.js
+curl_check200 /octo.c
+curl_check200 /octo.h
+curl_check200 /Sandwich/Office.txt
+curl_check200 /Sandwich/Factory/hamBURgers.xml
+curl_check200 /Sandwich/Factory/meats%20and%20cheeses/
+
+# --------------------------------------------------------
+set +o pipefail
+set +e
+kill -INT "$SERVER_PID"
+killall -s INT goaspen_smoke_test-http-server
+sleep 5
+SERVER_PID=""
