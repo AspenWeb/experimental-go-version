@@ -1,13 +1,13 @@
 /*
-Main entry point for goaspen.
+Main entry point for Aspen.
 
 This executable's main responsibility is to parse command-line arguments and
-construct a goaspen.SiteBuilderCfg which is passed to goaspen.BuildMain.
+construct an aspen.SiteBuilderCfg which is passed to aspen.BuildMain.
 
 Something like a development cycle is supported via the `changes_reload` flag,
 which implies both the `run_server` (-s) and `compile` (-C) flags:
 
-    goaspen-build -w ./mysite/docroot -P mysite --changes_reload
+    aspen-build -w ./mysite/docroot -P mysite --changes_reload
 
 */
 package main
@@ -25,13 +25,13 @@ import (
 
 	"github.com/jteeuwen/go-pkg-optarg"
 	"github.com/kless/go-exp/inotify"
-	"github.com/meatballhat/goaspen"
+	"github.com/zetaweb/aspen-go"
 )
 
 var (
 	usageInfoTmpl = `Usage: %s [options]
 
-By default, goaspen-build will build simplates found in the "www root" (-w)
+By default, aspen-build will build simplates found in the "www root" (-w)
 into Go sources written to generated package (-p) in the output GOPATH base
 (-o), optionally running 'go fmt' (-F).  The output GOPATH base must already
 exist, or the '-m' flag may be passed to ensure it exists.
@@ -86,9 +86,9 @@ func main() {
 
 	compile := true
 	format := true
-	genPkg := goaspen.DefaultGenPackage
+	genPkg := aspen.DefaultGenPackage
 	mkOutDir := false
-	outPath := goaspen.DefaultOutputGopath
+	outPath := aspen.DefaultOutputGopath
 
 	changesReload := false
 	debug := false
@@ -96,18 +96,18 @@ func main() {
 	listDirs := false
 	runServer := false
 
-	charsetDynamic := goaspen.DefaultCharsetDynamic
-	charsetStatic := goaspen.DefaultCharsetStatic
+	charsetDynamic := aspen.DefaultCharsetDynamic
+	charsetStatic := aspen.DefaultCharsetStatic
 
-	indices := goaspen.DefaultIndices
-	argIndices := goaspen.DefaultIndices
+	indices := aspen.DefaultIndices
+	argIndices := aspen.DefaultIndices
 
 	optarg.UsageInfo = usageInfo
 
 	optarg.Add("h", "help", "Show this help message and exit", false)
 
 	optarg.Header("Serving Options")
-	goaspen.AddCommonServingOptions(genServerBind,
+	aspen.AddCommonServingOptions(genServerBind,
 		wwwRoot, charsetDynamic, charsetStatic, indices, debug, listDirs)
 	optarg.Add("s", "run_server",
 		"Start server once compiled (implies `-C`)", runServer)
@@ -165,7 +165,7 @@ func main() {
 		}
 	}
 
-	goaspen.SetDebug(debug)
+	aspen.SetDebug(debug)
 
 	retcode := 0
 
@@ -183,7 +183,7 @@ func main() {
 	}
 
 	for {
-		retcode = goaspen.BuildMain(&goaspen.SiteBuilderCfg{
+		retcode = aspen.BuildMain(&aspen.SiteBuilderCfg{
 			WwwRoot:       wwwRoot,
 			OutputGopath:  outPath,
 			GenPackage:    genPkg,

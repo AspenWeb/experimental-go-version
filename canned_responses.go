@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"bytes"
@@ -9,16 +9,16 @@ import (
 )
 
 var (
-	goaspenCss = `
+	aspenCss = `
 body { font-family: monospace; }
 #server_signature { font-size: 9px; font-style: oblique; }
 `
-	goaspenServerSig = `
+	aspenServerSig = `
     <hr />
     <p id="server_signature">
       Brought to you by
       <strong>
-        <a href="https://github.com/meatballhat/goaspen">goaspen</a>
+        <a href="https://github.com/zetaweb/aspen-go">aspen</a>
       </strong>
       (powered by <a href="http://golang.org">gophers</a>.)
     </p>
@@ -29,13 +29,13 @@ body { font-family: monospace; }
   <head>
     <title>500 Internal Server Error</title>
     <style type="text/css">
-    ` + goaspenCss + `
+    ` + aspenCss + `
     </style>
   </head>
   <body>
     <h1>500 Internal Server Error</h1>
     <p>Something go boom inside.</p>
-    ` + goaspenServerSig + `
+    ` + aspenServerSig + `
   </body>
 </html>
 `)
@@ -45,12 +45,12 @@ body { font-family: monospace; }
   <head>
     <title>404 Not Found</title>
     <style type="text/css">
-    ` + goaspenCss + `
+    ` + aspenCss + `
     </style>
   </head>
   <body>
     <h1>404 Not Found (Ｔ▽Ｔ)</h1>
-    ` + goaspenServerSig + `
+    ` + aspenServerSig + `
   </body>
 </html>
 `)
@@ -60,12 +60,12 @@ body { font-family: monospace; }
   <head>
     <title>406 Not Acceptable</title>
     <style type="text/css">
-    ` + goaspenCss + `
+    ` + aspenCss + `
     </style>
   </head>
   <body>
     <h1>406 Not Acceptable (Ｔ▽Ｔ)</h1>
-    ` + goaspenServerSig + `
+    ` + aspenServerSig + `
   </body>
 </html>
 `)
@@ -75,7 +75,7 @@ body { font-family: monospace; }
   <head>
     <title>{{.RequestPath}}</title>
     <style type="text/css">
-    ` + goaspenCss + `
+    ` + aspenCss + `
       #directory_listing { font-size: 12px; }
       td, th { padding: 1px 5px; }
       tr:hover { background: #eef; }
@@ -111,7 +111,7 @@ body { font-family: monospace; }
         {{end}}
       </tbody>
     </table>
-    ` + goaspenServerSig + `
+    ` + aspenServerSig + `
   </body>
 </html>
 `))

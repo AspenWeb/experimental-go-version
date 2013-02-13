@@ -3,20 +3,16 @@ smoke: docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm
 
 serve:
 	./build
-	./bin/goaspen_smoke_test-http-server
+	./bin/aspen_go_smoke_test-http-server
 
 clean:
-	rm -vf ./bin/goaspen_smoke_test-http-server
-	rm -rvf ./src/goaspen_smoke_test
-	rm -vf ./docroot/.goaspen-index.json
-	GOPATH=./:$(GOPATH) go clean -x -i goaspen_smoke_test
+	GOPATH=$(shell pwd):$(GOPATH) go clean -x -i aspen_go_smoke_test 2>/dev/null || true
+	rm -vf ./bin/aspen_go_smoke_test-http-server
+	rm -rvf ./src/aspen_go_smoke_test
+	rm -vf ./docroot/.aspen-go-index.json
 
 prep:
-	if [ -z "$(GOASPEN_NOVPATHS)" ] ; then \
-		rsync -avz ./.vpaths/ ./docroot ; \
-	else \
-		git clean -xfd ./docroot ; \
-	fi
+	rsync -avz ./.vpaths/ ./docroot
 
 docroot/Sandwich/Factory/meats\ and\ cheeses/default.htm:
 	mkdir -p docroot/Sandwich/Factory/meats\ and\ cheeses

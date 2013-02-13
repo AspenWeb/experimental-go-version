@@ -1,5 +1,5 @@
 Go port of Aspen web framework (see http://aspen.io)
 
-goaspen currently supports rendered, negotiated, and static Simplates as
+Aspen in Go currently supports rendered, negotiated, and static Simplates as
 described here: http://aspen.io/simplates/. The only template engine
 implemented is Go's standard library "text/template".

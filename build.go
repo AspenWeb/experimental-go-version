@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"encoding/json"
@@ -12,21 +12,21 @@ import (
 )
 
 var (
-	SiteIndexFilename   = ".goaspen-index.json"
-	DefaultGenPackage   = "goaspen_gen"
+	SiteIndexFilename   = ".aspen-go-index.json"
+	DefaultGenPackage   = "aspen_go_gen"
 	DefaultOutputGopath = ""
-	genServerTemplate   = template.Must(template.New("goaspen-genserver").Parse(`
+	genServerTemplate   = template.Must(template.New("aspen-genserver").Parse(`
 package main
 // GENERATED FILE - DO NOT EDIT
-// Rebuild with goaspen-build!
+// Rebuild with aspen-build!
 
 import (
-    "github.com/meatballhat/goaspen"
+    "github.com/zetaweb/aspen-go"
     _ "{{.GenPackage}}"
 )
 
 func main() {
-    goaspen.RunServerMain("{{.WwwRoot}}",
+    aspen.RunServerMain("{{.WwwRoot}}",
         "{{.GenServerBind}}", "{{.GenPackage}}",
         "{{.CharsetDynamic}}", "{{.CharsetStatic}}",
         "{{.IndicesString}}", {{.ListDirs}}, {{.Debug}})

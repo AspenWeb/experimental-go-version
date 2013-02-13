@@ -6,12 +6,12 @@ else
     HERE="$(dirname $0)"
 fi
 
-export GOASPEN_CONFIGURATION_SCRIPTS="${GOASPEN_CONFIGURATION_SCRIPTS:-"$HERE/web-config.go"}"
+export ASPEN_GO_CONFIGURATION_SCRIPTS="${ASPEN_GO_CONFIGURATION_SCRIPTS:-"$HERE/web-config.go"}"
 export DEBUG="${DEBUG:-1}"
 export GOPATH="$HERE:$GOPATH"
 
-exec goaspen-build \
+exec aspen-go-build \
     -w "$HERE/docroot" \
-    -P goaspen_smoke_test \
+    -P aspen_go_smoke_test \
     --indices +default.htm \
     --list_directories "$@"

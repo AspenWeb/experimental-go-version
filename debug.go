@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"log"

@@ -56,7 +56,7 @@ curl_check200 /Sandwich/Factory/meats%20and%20cheeses/
 set +o pipefail
 set +e
 kill -INT "$SERVER_PID"
-killall -s INT goaspen_smoke_test-http-server
+killall -s INT aspen_go_smoke_test-http-server
 sleep 5
 SERVER_PID=""
 

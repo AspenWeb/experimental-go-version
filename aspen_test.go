@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"bytes"
@@ -81,8 +81,8 @@ ctx["D"] = &NDance{
 
 var (
 	tmpdir = path.Join(os.TempDir(),
-		fmt.Sprintf("goaspen_test-%d", time.Now().UTC().UnixNano()))
-	goAspenGenDir = path.Join(tmpdir, "src", "goaspen_gen")
+		fmt.Sprintf("aspen_test-%d", time.Now().UTC().UnixNano()))
+	aspenGoGenDir = path.Join(tmpdir, "src", "aspen_go_gen")
 	testWwwRoot   = path.Join(tmpdir, "test-site")
 	goCmd         string
 	noCleanup     bool
@@ -117,11 +117,11 @@ func init() {
 	}
 
 	*(&goCmd) = cmd
-	*(&noCleanup) = len(os.Getenv("GOASPEN_TEST_NOCLEANUP")) > 0
+	*(&noCleanup) = len(os.Getenv("ASPEN_GO_TEST_NOCLEANUP")) > 0
 }
 
 func mkTmpDir() {
-	err := os.MkdirAll(goAspenGenDir, os.ModeDir|os.ModePerm)
+	err := os.MkdirAll(aspenGoGenDir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -164,12 +164,12 @@ func mkTestSite() string {
 }
 
 func writeRenderedTemplate() (string, error) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		return "", err
 	}
 
-	outfileName := path.Join(goAspenGenDir, s.OutputName())
+	outfileName := path.Join(aspenGoGenDir, s.OutputName())
 	outf, err := os.Create(outfileName)
 	if err != nil {
 		return outfileName, err
@@ -188,8 +188,8 @@ func writeRenderedTemplate() (string, error) {
 	return outfileName, nil
 }
 
-func runGoCommandOnGoAspenGen(command string) error {
-	cmd := exec.Command(goCmd, command, "goaspen_gen")
+func runGoCommandOnAspenGoGen(command string) error {
+	cmd := exec.Command(goCmd, command, "aspen_go_gen")
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -202,16 +202,16 @@ func runGoCommandOnGoAspenGen(command string) error {
 	return nil
 }
 
-func formatGoAspenGen() error {
-	return runGoCommandOnGoAspenGen("fmt")
+func formatAspenGoGen() error {
+	return runGoCommandOnAspenGoGen("fmt")
 }
 
-func buildGoAspenGen() error {
-	return runGoCommandOnGoAspenGen("install")
+func buildAspenGoGen() error {
+	return runGoCommandOnAspenGoGen("install")
 }
 
 func TestSimplateKnowsItsFilename(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/hasty-decisions.txt", "herpherpderpherp")
 	if err != nil {
 		t.Error(err)
 		return
@@ -224,7 +224,7 @@ func TestSimplateKnowsItsFilename(t *testing.T) {
 }
 
 func TestSimplateKnowsItsContentType(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/hasty-decisions.js", "function herp() { return 'derp'; }")
 	if err != nil {
 		t.Error(err)
 		return
@@ -239,7 +239,7 @@ func TestSimplateKnowsItsContentType(t *testing.T) {
 }
 
 func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/nothing.txt", "foo\nham\n")
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/nothing.txt", "foo\nham\n")
 	if err != nil {
 		t.Error(err)
 		return
@@ -251,7 +251,7 @@ func TestStaticSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/flip/dippy slippy/%zonk/snork.d/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/flip/dippy slippy/%zonk/snork.d/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -263,7 +263,7 @@ func TestRenderedSimplateKnowsItsOutputName(t *testing.T) {
 }
 
 func TestDetectsRenderedSimplate(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -275,7 +275,7 @@ func TestDetectsRenderedSimplate(t *testing.T) {
 }
 
 func TestDetectsStaticSimplate(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -287,7 +287,7 @@ func TestDetectsStaticSimplate(t *testing.T) {
 }
 
 func TestDetectsJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -299,7 +299,7 @@ func TestDetectsJSONSimplates(t *testing.T) {
 }
 
 func TestDetectsNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/hork", basicNegotiatedSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/hork", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -312,7 +312,7 @@ func TestDetectsNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-static.txt", basicStaticTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -328,7 +328,7 @@ func TestAssignsNoGoPagesToStaticSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -340,7 +340,7 @@ func TestAssignsAnInitPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -352,7 +352,7 @@ func TestAssignsOneLogicPageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -364,7 +364,7 @@ func TestAssignsOneTemplatePageToRenderedSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -376,7 +376,7 @@ func TestAssignsAnInitPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -388,7 +388,7 @@ func TestAssignsLogicPageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic.json", basicJsonSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -400,7 +400,7 @@ func TestAssignsNoTemplatePageToJSONSimplates(t *testing.T) {
 }
 
 func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -412,7 +412,7 @@ func TestAssignsAnInitPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-negotiated", basicNegotiatedSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -424,7 +424,7 @@ func TestAssignsALogicPageToNegotiatedSimplates(t *testing.T) {
 }
 
 func TestRenderedSimplateCanExecuteToWriter(t *testing.T) {
-	s, err := newSimplateFromString("goaspen_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
+	s, err := newSimplateFromString("aspen_go_gen", "/tmp", "/tmp/basic-rendered.txt", basicRenderedTxtSimplate)
 	if err != nil {
 		t.Error(err)
 		return
@@ -473,13 +473,13 @@ func TestRenderedSimplateCanBeCompiled(t *testing.T) {
 		return
 	}
 
-	err = formatGoAspenGen()
+	err = formatAspenGoGen()
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = buildGoAspenGen()
+	err = buildAspenGoGen()
 	if err != nil {
 		t.Error(err)
 		return
@@ -495,7 +495,7 @@ func TestTreeWalkerRequiresNonEmptyPackageName(t *testing.T) {
 }
 
 func TestTreeWalkerRequiresValidDirectoryRoot(t *testing.T) {
-	_, err := newTreeWalker("goaspen_gen", path.Join(tmpdir, "dev/null"))
+	_, err := newTreeWalker("aspen_go_gen", path.Join(tmpdir, "dev/null"))
 	if err == nil {
 		t.Errorf("New tree walker failed to reject invalid dir!")
 		return
@@ -510,7 +510,7 @@ func TestTreeWalkerYieldsSimplates(t *testing.T) {
 		defer rmTmpDir()
 	}
 
-	tw, err := newTreeWalker("goaspen_gen", siteRoot)
+	tw, err := newTreeWalker("aspen_go_gen", siteRoot)
 	if err != nil {
 		t.Error(err)
 		return
@@ -569,8 +569,8 @@ func TestNewSiteBuilderDefaultsGeneratedCodePackage(t *testing.T) {
 		t.Error(err)
 	}
 
-	if sb.GenPackage != "goaspen_gen" {
-		t.Errorf("Generated package default != \"goaspen_gen\": %q", sb.GenPackage)
+	if sb.GenPackage != "aspen_go_gen" {
+		t.Errorf("Generated package default != \"aspen_go_gen\": %q", sb.GenPackage)
 	}
 }
 
@@ -652,7 +652,7 @@ func TestSiteBuilderBuildWritesSources(t *testing.T) {
 		return
 	}
 
-	fi, err := os.Stat(path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go"))
+	fi, err := os.Stat(path.Join(aspenGoGenDir, "shill-SLASH-cans-DOT-txt.go"))
 	if err != nil {
 		t.Error(err)
 		return
@@ -690,7 +690,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 		return
 	}
 
-	fileName := path.Join(goAspenGenDir, "shill-SLASH-cans-DOT-txt.go")
+	fileName := path.Join(aspenGoGenDir, "shill-SLASH-cans-DOT-txt.go")
 
 	fileContent, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -702,7 +702,7 @@ func TestSiteBuilderBuildFormatsSources(t *testing.T) {
 	io.WriteString(firstHash, string(fileContent))
 	firstSum := fmt.Sprintf("%x", firstHash.Sum(nil))
 
-	err = formatGoAspenGen()
+	err = formatAspenGoGen()
 	if err != nil {
 		t.Error(err)
 		return
@@ -750,7 +750,7 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 		return
 	}
 
-	serverBinary := path.Join(sb.OutputGopath, "bin", "goaspen_gen-http-server")
+	serverBinary := path.Join(sb.OutputGopath, "bin", "aspen_go_gen-http-server")
 
 	fi, err := os.Stat(serverBinary)
 	if err != nil {

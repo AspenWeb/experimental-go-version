@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	internalAcceptHeader = "X-GoAspen-Accept"
+	internalAcceptHeader = "X-AspenGo-Accept"
 	pathTransHeader      = "X-HTTP-Path-Translated"
 )
 
@@ -28,7 +28,7 @@ type handlerFuncRegistration struct {
 }
 
 func serve404(w http.ResponseWriter, req *http.Request) {
-	charset := req.Header.Get("X-GoAspen-CharsetDynamic")
+	charset := req.Header.Get("X-AspenGo-CharsetDynamic")
 	if len(charset) == 0 {
 		charset = "utf-8"
 	}

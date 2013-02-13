@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"fmt"
@@ -25,9 +25,9 @@ var (
 		SimplateTypeStatic,
 	}
 	simplateTypeTemplates = map[string]*template.Template{
-		SimplateTypeJson:       escapedSimplateTemplate(simplateTypeJSONTmpl, "goaspen-gen-json"),
-		SimplateTypeRendered:   escapedSimplateTemplate(simplateTypeRenderedTmpl, "goaspen-gen-rendered"),
-		SimplateTypeNegotiated: escapedSimplateTemplate(simplateTypeNegotiatedTmpl, "goaspen-gen-negotiated"),
+		SimplateTypeJson:       escapedSimplateTemplate(simplateTypeJSONTmpl, "aspen-gen-json"),
+		SimplateTypeRendered:   escapedSimplateTemplate(simplateTypeRenderedTmpl, "aspen-gen-rendered"),
+		SimplateTypeNegotiated: escapedSimplateTemplate(simplateTypeNegotiatedTmpl, "aspen-gen-negotiated"),
 		SimplateTypeStatic:     nil,
 	}
 	defaultRenderer = "#!go/text/template"

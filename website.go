@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"encoding/json"
@@ -97,11 +97,11 @@ func EnsureInitialized() *Website {
 		return protoWebsite
 	}
 
-	if len(os.Getenv("__GOASPEN_PARENT_PROCESS")) > 0 {
+	if len(os.Getenv("__ASPEN_GO_PARENT_PROCESS")) > 0 {
 		return protoWebsite
 	}
 
-	configScripts := os.Getenv("GOASPEN_CONFIGURATION_SCRIPTS")
+	configScripts := os.Getenv("ASPEN_GO_CONFIGURATION_SCRIPTS")
 
 	if len(configScripts) > 0 {
 		*(&protoWebsite) = loadProtoWebsite(configScripts, protoWebsite)
@@ -166,7 +166,7 @@ func loadProtoWebsite(configScripts string, proto *Website) *Website {
 	for _, script := range scripts {
 		w, err = loadWebsiteFromScript(strings.TrimSpace(script), w)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "goaspen: CONFIG ERROR: %v\n", err)
+			fmt.Fprintf(os.Stderr, "aspen: CONFIG ERROR: %v\n", err)
 		}
 	}
 
@@ -182,7 +182,7 @@ func loadWebsiteFromScript(script string, w *Website) (*Website, error) {
 	cmd := exec.Command("go", "run", script)
 
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("__GOASPEN_PARENT_PROCESS=%d", os.Getpid()))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("__ASPEN_GO_PARENT_PROCESS=%d", os.Getpid()))
 
 	cmd.Stderr = os.Stderr
 
@@ -229,7 +229,7 @@ func loadWebsiteFromScript(script string, w *Website) (*Website, error) {
 
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "goaspen: CONFIG ERROR: %v\n", err)
+		fmt.Fprintf(os.Stderr, "aspen: CONFIG ERROR: %v\n", err)
 	}
 
 	return w, nil
@@ -452,10 +452,10 @@ func (me *websitePipelineHandler) String() string {
 
 func (me *websitePipelineHandler) injectCustomHeaders(req *http.Request) {
 	me.updateNegType(req, req.URL.Path)
-	req.Header.Set("X-GoAspen-PackageName", me.w.PackageName)
-	req.Header.Set("X-GoAspen-WwwRoot", me.w.WwwRoot)
-	req.Header.Set("X-GoAspen-CharsetStatic", me.w.CharsetStatic)
-	req.Header.Set("X-GoAspen-CharsetDynamic", me.w.CharsetDynamic)
+	req.Header.Set("X-AspenGo-PackageName", me.w.PackageName)
+	req.Header.Set("X-AspenGo-WwwRoot", me.w.WwwRoot)
+	req.Header.Set("X-AspenGo-CharsetStatic", me.w.CharsetStatic)
+	req.Header.Set("X-AspenGo-CharsetDynamic", me.w.CharsetDynamic)
 }
 
 func (me *websitePipelineHandler) updateNegType(req *http.Request, filename string) {

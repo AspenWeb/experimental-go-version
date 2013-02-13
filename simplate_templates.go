@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"strings"
@@ -13,17 +13,17 @@ package {{.GenPackage}}
 // Source: {{.AbsFilename}}
 // Type:   {{.Type}}
 //
-// Rebuild with goaspen-build!
+// Rebuild with aspen-build!
 
 import (
     "net/http"
 
-    "github.com/meatballhat/goaspen"
+    "github.com/zetaweb/aspen-go"
 )
 
 `
 	simplateTmplWebFuncDeclaration = `
-    local{{.FuncName}}Website = goaspen.DeclareWebsite("{{.GenPackage}}")
+    local{{.FuncName}}Website = aspen.DeclareWebsite("{{.GenPackage}}")
 
     _ = local{{.FuncName}}Website.RegisterSimplate("{{.Type}}",
         "{{.SiteRoot}}",
@@ -62,7 +62,7 @@ import (
 {{.InitPage.Body}}
 
 var (
-    _ = goaspen.EnsureInitialized()
+    _ = aspen.EnsureInitialized()
 
     simplateTmplMap{{.FuncName}} = map[string]*template.Template{
         {{range .TemplatePages}}
@@ -77,7 +77,7 @@ var (
 
     {{range .TemplatePages}}
     response.RegisterContentTypeHandler("{{.Spec.ContentType}}",
-        func(response *goaspen.HTTPResponseWrapper) {
+        func(response *aspen.HTTPResponseWrapper) {
             tmpl := simplateTmplMap{{.Parent.FuncName}}["{{.Spec.ContentType}}"]
             var tmplBuf bytes.Buffer
 
@@ -100,7 +100,7 @@ var (
 {{.InitPage.Body}}
 
 var (
-    _ = goaspen.EnsureInitialized()
+    _ = aspen.EnsureInitialized()
 
 ` + simplateTmplWebFuncDeclaration + `
 )

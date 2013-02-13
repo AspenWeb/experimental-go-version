@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/meatballhat/goaspen"
+	. "github.com/zetaweb/aspen-go"
 )
 
 func configure(website *Website) *Website {

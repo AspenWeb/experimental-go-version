@@ -1,4 +1,4 @@
-package goaspen
+package aspen
 
 import (
 	"encoding/json"
@@ -80,7 +80,7 @@ func (me *HTTPResponseWrapper) respond500(err error) {
 	me.w.Header().Set("Content-Type",
 		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	if isDebug {
-		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
+		me.w.Header().Set("X-AspenGo-Error", fmt.Sprintf("%v", err))
 	}
 	me.w.WriteHeader(http.StatusInternalServerError)
 	me.w.Write(http500Response)
@@ -90,7 +90,7 @@ func (me *HTTPResponseWrapper) respond406(err error) {
 	me.w.Header().Set("Content-Type",
 		fmt.Sprintf("text/html; charset=%v", me.website.CharsetDynamic))
 	if isDebug {
-		me.w.Header().Set("X-GoAspen-Error", fmt.Sprintf("%v", err))
+		me.w.Header().Set("X-AspenGo-Error", fmt.Sprintf("%v", err))
 	}
 
 	me.w.WriteHeader(http.StatusNotAcceptable)
