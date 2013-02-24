@@ -22,4 +22,4 @@ smoke: test
 smoke-serve: test
 	$(MAKE) -C examples/smoke-test-site clean prep serve
 
-.PHONY: test build deps clean smoke
+.PHONY: test build deps clean smoke smoke-serve
