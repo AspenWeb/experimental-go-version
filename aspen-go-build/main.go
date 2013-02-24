@@ -3,28 +3,27 @@ Main entry point for Aspen.
 
 This executable's main responsibility is to parse command-line arguments and
 construct an aspen.SiteBuilderCfg which is passed to aspen.BuildMain.
-
-Something like a development cycle is supported via the `changes_reload` flag,
-which implies both the `run_server` (-s) and `compile` (-C) flags:
-
-    aspen-build -w ./mysite/docroot -P mysite --changes_reload
-
 */
 package main
+
+//Something like a development cycle is supported via the `changes_reload` flag,
+//which implies both the `run_server` (-s) and `compile` (-C) flags:
+
+//aspen-build -w ./mysite/docroot -P mysite --changes_reload
 
 import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
+	//"os/exec"
 	"path"
-	"path/filepath"
+	//"path/filepath"
 	"strings"
-	"syscall"
-	"time"
+	//"syscall"
+	//"time"
 
 	"github.com/jteeuwen/go-pkg-optarg"
-	"github.com/kless/go-exp/inotify"
+	//"github.com/kless/go-exp/inotify"
 	"github.com/zetaweb/aspen-go"
 )
 
@@ -36,47 +35,47 @@ into Go sources written to generated package (-p) in the output GOPATH base
 (-o), optionally running 'go fmt' (-F).  The output GOPATH base must already
 exist, or the '-m' flag may be passed to ensure it exists.
 `
-	usageInfo    = ""
-	changeEvents = inotify.IN_CREATE | inotify.IN_DELETE |
-		inotify.IN_DELETE_SELF | inotify.IN_MODIFY | inotify.IN_MOVE
+	usageInfo = ""
+	//changeEvents = inotify.IN_CREATE | inotify.IN_DELETE |
+	//inotify.IN_DELETE_SELF | inotify.IN_MODIFY | inotify.IN_MOVE
 )
 
 func init() {
 	*(&usageInfo) = fmt.Sprintf(usageInfoTmpl, path.Base(os.Args[0]))
 }
 
-func watchForChanges(wwwRoot string, q chan bool) error {
-	watcher, err := inotify.NewWatcher()
-	if err != nil {
-		return err
-	}
+//func watchForChanges(wwwRoot string, q chan bool) error {
+//watcher, err := inotify.NewWatcher()
+//if err != nil {
+//return err
+//}
 
-	defer watcher.Close()
+//defer watcher.Close()
 
-	err = filepath.Walk(wwwRoot,
-		func(pathEntry string, info os.FileInfo, err error) error {
-			return watcher.Watch(pathEntry)
-		})
+//err = filepath.Walk(wwwRoot,
+//func(pathEntry string, info os.FileInfo, err error) error {
+//return watcher.Watch(pathEntry)
+//})
 
-	if err != nil {
-		return err
-	}
+//if err != nil {
+//return err
+//}
 
-	for {
-		select {
-		case ev := <-watcher.Event:
-			if ev.Mask&changeEvents != 0 {
-				log.Println("Got change event:", ev)
-				q <- true
-				return nil
-			}
-		case err := <-watcher.Error:
-			log.Println("ERROR: inotify:", err)
-		}
-	}
+//for {
+//select {
+//case ev := <-watcher.Event:
+//if ev.Mask&changeEvents != 0 {
+//log.Println("Got change event:", ev)
+//q <- true
+//return nil
+//}
+//case err := <-watcher.Error:
+//log.Println("ERROR: inotify:", err)
+//}
+//}
 
-	return nil
-}
+//return nil
+//}
 
 func main() {
 	wwwRoot, err := os.Getwd()
@@ -90,11 +89,11 @@ func main() {
 	mkOutDir := false
 	outPath := aspen.DefaultOutputGopath
 
-	changesReload := false
+	//changesReload := false
 	debug := false
 	genServerBind := ":9182"
 	listDirs := false
-	runServer := false
+	//runServer := false
 
 	charsetDynamic := aspen.DefaultCharsetDynamic
 	charsetStatic := aspen.DefaultCharsetStatic
@@ -109,8 +108,8 @@ func main() {
 	optarg.Header("Serving Options")
 	aspen.AddCommonServingOptions(genServerBind,
 		wwwRoot, charsetDynamic, charsetStatic, indices, debug, listDirs)
-	optarg.Add("s", "run_server",
-		"Start server once compiled (implies `-C`)", runServer)
+	//optarg.Add("s", "run_server",
+	//"Start server once compiled (implies `-C`)", runServer)
 
 	optarg.Header("Source Generation & Compile Options")
 	optarg.Add("P", "package_name", "Generated source package name", genPkg)
@@ -120,11 +119,11 @@ func main() {
 	optarg.Add("m", "make_outdir",
 		"Make output GOPATH base if not exists", mkOutDir)
 	optarg.Add("C", "compile", "Compile generated sources", "")
-	optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
-		"changes to configuration files and document root files will cause "+
-		"simplates to rebuild, then re-exec the generated server binary "+
-		"(implies '--compile' and '--run_server').",
-		changesReload)
+	//optarg.Add("", "changes_reload", "Changes reload.  If set to true/1, "+
+	//"changes to configuration files and document root files will cause "+
+	//"simplates to rebuild, then re-exec the generated server binary "+
+	//"(implies '--compile' and '--run_server').",
+	//changesReload)
 
 	for opt := range optarg.Parse() {
 		switch opt.Name {
@@ -143,15 +142,15 @@ func main() {
 			mkOutDir = opt.Bool()
 		case "debug":
 			debug = opt.Bool()
-		case "changes_reload":
-			value := opt.Bool()
-			runServer = value
-			compile = value
-			changesReload = value
-		case "run_server":
-			value := opt.Bool()
-			runServer = value
-			compile = value
+		//case "changes_reload":
+		//value := opt.Bool()
+		//runServer = value
+		//compile = value
+		//changesReload = value
+		//case "run_server":
+		//value := opt.Bool()
+		//runServer = value
+		//compile = value
 		case "compile":
 			compile = opt.Bool()
 		case "charset_dynamic":
@@ -199,75 +198,76 @@ func main() {
 			Debug:          debug,
 		})
 
-		if !runServer {
-			break
-		}
+		//if !runServer {
+		//break
+		//}
+		break
 
-		retChan := make(chan int)
-		quitChan := make(chan bool)
+		//retChan := make(chan int)
+		//quitChan := make(chan bool)
 
-		go func(ret chan int, q chan bool) {
-			httpExe := path.Join(outPath, "bin", genPkg+"-http-server")
-			srvCmd := exec.Command(httpExe,
-				"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%v", debug))
-			srvCmd.Stdout = os.Stdout
-			srvCmd.Stderr = os.Stderr
+		//go func(ret chan int, q chan bool) {
+		//httpExe := path.Join(outPath, "bin", genPkg+"-http-server")
+		//srvCmd := exec.Command(httpExe,
+		//"-w", wwwRoot, "-a", genServerBind, "-x", fmt.Sprintf("%v", debug))
+		//srvCmd.Stdout = os.Stdout
+		//srvCmd.Stderr = os.Stderr
 
-			cmdErr := make(chan error)
+		//cmdErr := make(chan error)
 
-			go func() {
-				cmdErr <- srvCmd.Run()
-			}()
+		//go func() {
+		//cmdErr <- srvCmd.Run()
+		//}()
 
-			defer func() {
-				defer func() {
-					err := recover()
-					if err != nil {
-						log.Println("ERROR:", err)
-					}
-				}()
+		//defer func() {
+		//defer func() {
+		//err := recover()
+		//if err != nil {
+		//log.Println("ERROR:", err)
+		//}
+		//}()
 
-				time.Sleep(3000 * time.Millisecond)
-				srvCmd.Process.Kill()
-			}()
+		//time.Sleep(3000 * time.Millisecond)
+		//srvCmd.Process.Kill()
+		//}()
 
-			for {
-				keepLooping := true
-				select {
-				case <-q:
-					srvCmd.Process.Signal(syscall.SIGQUIT)
-					keepLooping = false
-					break
-				case err := <-cmdErr:
-					if _, ok := err.(*exec.ExitError); ok {
-						ret <- 9
-						return
-					}
-					keepLooping = false
-					break
-				default:
-					time.Sleep(1000 * time.Millisecond)
-				}
+		//for {
+		//keepLooping := true
+		//select {
+		//case <-q:
+		//srvCmd.Process.Signal(syscall.SIGQUIT)
+		//keepLooping = false
+		//break
+		//case err := <-cmdErr:
+		//if _, ok := err.(*exec.ExitError); ok {
+		//ret <- 9
+		//return
+		//}
+		//keepLooping = false
+		//break
+		//default:
+		//time.Sleep(1000 * time.Millisecond)
+		//}
 
-				if !keepLooping {
-					break
-				}
-			}
+		//if !keepLooping {
+		//break
+		//}
+		//}
 
-			ret <- 0
-			return
-		}(retChan, quitChan)
+		//ret <- 0
+		//return
+		//}(retChan, quitChan)
 
-		if changesReload {
-			go watchForChanges(wwwRoot, quitChan)
-		} else {
-			quitChan <- false
-		}
+		////if changesReload {
+		////go watchForChanges(wwwRoot, quitChan)
+		////} else {
+		//quitChan <- false
+		////}
 
-		retcode = <-retChan
-		if retcode != 0 {
-			break
-		}
+		//retcode = <-retChan
+		//if retcode != 0 {
+		//break
+		//}
 	}
 
 	os.Exit(retcode)

@@ -25,7 +25,9 @@ function die() {
 
 trap 'die' 1 2 3 15
 
-$HERE/build -x -s --changes_reload >>$HERE/smoke-server.log 2>&1 &
+#$HERE/build -x -s --changes_reload >>$HERE/smoke-server.log 2>&1 &
+$HERE/build -x >>$HERE/smoke-server.log 2>&1
+$HERE/bin/aspen_go_smoke_test-http-server >>$HERE/smoke-server.log 2>&1 &
 
 SERVER_PID="$!"
 

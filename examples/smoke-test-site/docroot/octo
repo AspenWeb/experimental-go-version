@@ -72,3 +72,12 @@ int main() {
     printf("And Suckers? %s\n", SUCKERS);
     return 0;
 }
+ text/x-c
+#include <stdio.h>
+#include "octo.h"
+
+int main() {
+    printf("The Mighty Octo has %d eyes!\n", EYES);
+    printf("And Suckers? %s\n", SUCKERS);
+    return 0;
+}

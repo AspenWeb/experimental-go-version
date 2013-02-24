@@ -8,6 +8,7 @@ fi
 
 export ASPEN_GO_CONFIGURATION_SCRIPTS="${ASPEN_GO_CONFIGURATION_SCRIPTS:-"$HERE/web-config.go"}"
 export DEBUG="${DEBUG:-1}"
+export PATH="${GOPATH%%:*}/bin:$PATH"
 export GOPATH="$HERE:$GOPATH"
 
 exec aspen-go-build \
