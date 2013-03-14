@@ -18,7 +18,7 @@ body { font-family: monospace; }
     <p id="server_signature">
       Brought to you by
       <strong>
-        <a href="https://github.com/zetaweb/aspen-go">aspen</a>
+        <a href="https://github.com/gittip/aspen-go">aspen</a>
       </strong>
       (powered by <a href="http://golang.org">gophers</a>.)
     </p>

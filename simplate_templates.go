@@ -18,7 +18,7 @@ package {{.GenPackage}}
 import (
     "net/http"
 
-    "github.com/zetaweb/aspen-go"
+    "github.com/gittip/aspen-go"
 )
 
 `

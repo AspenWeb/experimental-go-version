@@ -21,7 +21,7 @@ package main
 // Rebuild with aspen-build!
 
 import (
-    "github.com/zetaweb/aspen-go"
+    "github.com/gittip/aspen-go"
     _ "{{.GenPackage}}"
 )
 

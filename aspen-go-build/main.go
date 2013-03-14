@@ -24,7 +24,7 @@ import (
 
 	"github.com/howeyc/fsnotify"
 	"github.com/jteeuwen/go-pkg-optarg"
-	"github.com/zetaweb/aspen-go"
+	"github.com/gittip/aspen-go"
 )
 
 var (

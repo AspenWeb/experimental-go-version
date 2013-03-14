@@ -1,8 +1,8 @@
 LIBRARIES = \
-	github.com/zetaweb/aspen-go
+	github.com/gittip/aspen-go
 TARGETS = \
 	$(LIBRARIES) \
-	github.com/zetaweb/aspen-go/aspen-go-build
+	github.com/gittip/aspen-go/aspen-go-build
 
 test: build
 	go test -x -v $(GOFLAGS) $(LIBRARIES)
