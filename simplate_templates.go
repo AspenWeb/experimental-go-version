@@ -13,7 +13,7 @@ package {{.GenPackage}}
 // Source: {{.AbsFilename}}
 // Type:   {{.Type}}
 //
-// Rebuild with aspen-build!
+// Rebuild with aspen-go-build!
 
 import (
     "net/http"

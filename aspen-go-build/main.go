@@ -7,7 +7,7 @@ construct an aspen.SiteBuilderCfg which is passed to aspen.BuildMain.
 Something like a development cycle is supported via the `changes_reload` flag,
 which implies both the `run_server` (-s) and `compile` (-C) flags:
 
-aspen-build -w ./mysite/docroot -P mysite --changes_reload
+aspen-go-build -w ./mysite/docroot -P mysite --changes_reload
 */
 package main
 
@@ -30,7 +30,7 @@ import (
 var (
 	usageInfoTmpl = `Usage: %s [options]
 
-By default, aspen-build will build simplates found in the "www root" (-w)
+By default, aspen-go-build will build simplates found in the "www root" (-w)
 into Go sources written to generated package (-p) in the output GOPATH base
 (-o), optionally running 'go fmt' (-F).  The output GOPATH base must already
 exist, or the '-m' flag may be passed to ensure it exists.

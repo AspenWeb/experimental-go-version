@@ -18,7 +18,7 @@ var (
 	genServerTemplate   = template.Must(template.New("aspen-genserver").Parse(`
 package main
 // GENERATED FILE - DO NOT EDIT
-// Rebuild with aspen-build!
+// Rebuild with aspen-go-build!
 
 import (
     "github.com/gittip/aspen-go"
