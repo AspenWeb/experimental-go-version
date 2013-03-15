@@ -758,8 +758,8 @@ func TestNewSiteBuilderCompilesSources(t *testing.T) {
 		return
 	}
 
-	if fi.Mode() != (os.FileMode)(0750) {
-		t.Errorf("Site server binary %q permissions != %v: %v",
-			serverBinary, (os.FileMode)(0750), fi.Mode())
+	if (fi.Mode() & 0111) == 0 {
+		t.Errorf("Site server binary %q permissions not executable: %v",
+			serverBinary, fi.Mode())
 	}
 }
